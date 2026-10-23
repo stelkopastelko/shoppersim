@@ -2,10 +2,14 @@ map = {}
 
 local sti = require("libraries.sti")
 
-function map.load(world)
+
+function map.load(world, mapPath)
 
     -- zarejdam mapata
-    map.tiled = sti("assets/maps/shopmap.lua")
+    map.tiled = sti(mapPath)
+
+    -- pazq koq mapa e zaredena
+    map.current = mapPath
 
     -- tuk pazq colliderite
     map.colliders = {}
@@ -16,6 +20,7 @@ function map.load(world)
         -- samo object layerite
         if layer.type == "objectgroup" then
 
+            -- minavam prez vsichki obekti
             for _, object in ipairs(layer.objects) do
 
                 -- ako obekta e polygon
@@ -23,15 +28,13 @@ function map.load(world)
 
                     local points = {}
 
-                    -- STI veche e slojil pravilnite koordinati
+                    -- vzimam vsichki tochki na polygona
                     for _, point in ipairs(object.polygon) do
-
                         table.insert(points, point.x)
                         table.insert(points, point.y)
-
                     end
 
-                    -- pone 3 tochki
+                    -- trqbvat pone 3 tochki
                     if #points >= 6 then
 
                         local collider =
@@ -49,11 +52,29 @@ function map.load(world)
 
                     end
 
+                -- ako obekta e rectangle
+                elseif object.width > 0 and object.height > 0 then
+
+                    local collider =
+                        world:newRectangleCollider(
+                            object.x,
+                            object.y,
+                            object.width,
+                            object.height
+                        )
+
+                    collider:setType("static")
+
+                    table.insert(
+                        map.colliders,
+                        collider
+                    )
+
                 end
 
             end
 
-            -- ne pokazvam polygon layerite
+            -- skriwam object layerite
             layer.visible = false
 
         end
@@ -63,8 +84,33 @@ function map.load(world)
 end
 
 
+function map.ClearColliders()
+
+    -- mahvam starite collideri
+    for _, collider in ipairs(map.colliders) do
+        collider:destroy()
+    end
+
+    -- izprazvam tablicata
+    map.colliders = {}
+
+end
+
+
+function map.changeMap(world, mapPath)
+
+    -- mahvam collisiona na starata mapa
+    map.ClearColliders()
+
+    -- zarejdam novata mapa
+    map.load(world, mapPath)
+
+end
+
+
 function map.draw()
 
+    -- risuvam tekushtata mapa
     map.tiled:draw()
 
 end

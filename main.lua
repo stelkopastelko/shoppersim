@@ -34,7 +34,7 @@ function love.load() -- izpulnqva se vednuj pri startirane na igrata
 
     player.load(world) -- zarejda player-a i mu podava physics world-a
     
-    map.load(world)
+    map.load(world, "assets/maps/shopmap.lua")
 
     -- tablica v koqto pazq granicite na mapata
     walls = {}
@@ -117,10 +117,10 @@ end
 
 function love.draw() -- risuva vsichko vseki frame
      map.draw()
-    customer.draw()
+    --customer.draw()
     player.draw() -- risuva player-a
 
-    npc.draw() -- risuva npc-to i dialogue UI-to
+    --npc.draw() -- risuva npc-to i dialogue UI-to
 
     shop.draw() -- risuva stokite / shop obektite
 
@@ -128,6 +128,12 @@ function love.draw() -- risuva vsichko vseki frame
     -- tova e samo za test dokato pravim collision-a
     world:draw()
 
+ love.graphics.print(
+    "X: " .. math.floor(player.x) ..
+    " Y: " .. math.floor(player.y),
+    10,
+    10
+)
 end
 
 
@@ -196,7 +202,28 @@ function love.keypressed(key) -- izpulnqva se vednuj pri natiskane na klavish
             end
 
         end
-
+         
     end
+     if key == "e" 
+    and map.current == "assets/maps/shopmap.lua"
+     and player.x > 200
+     and player.x < 250
+     and player.y > 50
+     and player.y < 100 then
+        map.changeMap(world, "assets/maps/storagemap.lua")
+        player.collider:setPosition(80, 171)
+        return
+end
+     if key == "e" 
+    and map.current == "assets/maps/storagemap.lua"
+     and player.x > 50
+     and player.x < 100
+     and player.y > 160
+     and player.y < 180 then
+        map.changeMap(world, "assets/maps/shopmap.lua")
+        player.collider:setPosition(232,110 )
+        return
+end
+
 
 end
