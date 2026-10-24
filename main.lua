@@ -211,15 +211,15 @@ function love.keypressed(key) -- izpulnqva se vednuj pri natiskane na klavish
      and player.y > 50
      and player.y < 100 then
         map.changeMap(world, "assets/maps/storagemap.lua")
-        player.collider:setPosition(80, 171)
+        player.collider:setPosition(941, 697)
         return
 end
      if key == "e" 
     and map.current == "assets/maps/storagemap.lua"
-     and player.x > 50
-     and player.x < 100
-     and player.y > 160
-     and player.y < 180 then
+     and player.x > 910
+     and player.x < 970
+     and player.y > 690
+     and player.y < 700 then
         map.changeMap(world, "assets/maps/shopmap.lua")
         player.collider:setPosition(232,110 )
         return
