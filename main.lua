@@ -1,229 +1,306 @@
-require("player") -- zarejda player.lua
-require("npc")    -- zarejda npc.lua
-require("shop")   -- zarejda shop.lua
+require("player")
+require("npc")
+require("shop")
 require("customer")
 require("map")
-local wf = require("libraries/windfield") -- zarejda Windfield bibliotekata
+
+local wf = require("libraries/windfield")
 
 
--- razmer na prozoreca
-SCREEN_WIDTH = 1920 -- shirochina na igrata
-SCREEN_HEIGHT = 1080 -- visochina na igrata
+-- screen
+SCREEN_WIDTH = 1920
+SCREEN_HEIGHT = 1080
 
 
-function love.load() -- izpulnqva se vednuj pri startirane na igrata
-   love.graphics.setDefaultFilter("nearest", "nearest")
-    -- Full HD rezoluciq
-    love.window.setMode(
-        SCREEN_WIDTH, -- shirochina na prozoreca
-        SCREEN_HEIGHT -- visochina na prozoreca
-    )
+-- map transition
+transitionAlpha = 0
+transitioning = false
+transitionSpeed = 2
+transitionDirection = 1
+
+nextMap = nil
+nextX = 0
+nextY = 0
 
 
-    -- pravq physics world bez gravitaciq
-    world = wf.newWorld(
-        0, -- gravitaciq po X
-        0  -- gravitaciq po Y
-    )
+function startMapTransition(mapPath, x, y)
 
+    if transitioning == true then
+        return
+    end
 
-    -- zarejdam sistemite
-    npc.load() -- zarejda promenlivite na npc-to
+    transitioning = true
+    transitionDirection = 1
 
-    shop.load() -- zarejda magazina i sprite-ovete na stokite
-
-    player.load(world) -- zarejda player-a i mu podava physics world-a
-    
-    map.load(world, "assets/maps/shopmap.lua")
-
-    -- tablica v koqto pazq granicite na mapata
-    walls = {}
-
-
-    -- gorna granica
-    walls.top = world:newRectangleCollider(
-        -10, -- X poziciq
-        -20, -- Y poziciq, malko izvun ekrana
-        SCREEN_WIDTH, -- shirochina na stenata
-        20 -- visochina na stenata
-    )
-
-    -- stenata ne moje da se dviji
-    walls.top:setType("static")
-
-
-    -- dolna granica
-    walls.bottom = world:newRectangleCollider(
-        -10, -- X poziciq
-        SCREEN_HEIGHT, -- zapochva sled dolniq krai na ekrana
-        SCREEN_WIDTH, -- shirochina na stenata
-        20 -- visochina na stenata
-    )
-
-    -- stenata ne moje da se dviji
-    walls.bottom:setType("static")
-
-
-    -- lqva granica
-    walls.left = world:newRectangleCollider(
-        -20, -- stoi izvun lqvata strana na ekrana
-        -10, -- Y poziciq
-        20, -- shirochina na stenata
-        SCREEN_HEIGHT -- visochina kolkoto celiq ekran
-    )
-
-    -- stenata ne moje da se dviji
-    walls.left:setType("static")
-
-
-    -- dqsna granica
-    walls.right = world:newRectangleCollider(
-        SCREEN_WIDTH, -- zapochva sled desniq krai na ekrana
-        -10, -- Y poziciq
-        20, -- shirochina na stenata
-        SCREEN_HEIGHT -- visochina kolkoto celiq ekran
-    )
-
-    -- stenata ne moje da se dviji
-    walls.right:setType("static")
+    nextMap = mapPath
+    nextX = x
+    nextY = y
 
 end
 
 
-function love.update(dt) -- izpulnqva se vseki frame
-       customer.update(dt)
-    -- player.update izchislqva dvijenieto i animaciite
-    player.update(dt)
+function love.load()
+   promptFont = love.graphics.newFont(18)
+    love.graphics.setDefaultFilter("nearest", "nearest")
+
+    love.window.setMode(
+        SCREEN_WIDTH,
+        SCREEN_HEIGHT
+    )
+
+    -- physics world
+    world = wf.newWorld(0, 0)
+
+    npc.load()
+    shop.load()
+    player.load(world)
+
+    -- starting map
+    map.load(
+        world,
+        "assets/maps/shopmap.lua"
+    )
+
+end
 
 
-    -- update-vam physics world-a
-    -- tuk Windfield realno mestи collider-ite i smqta collision-ite
+function love.update(dt)
+
+    -- normal game update
+    if transitioning == false then
+
+        customer.update(dt)
+        player.update(dt)
+        npc.update()
+
+    else
+
+        -- spiram player-a po vreme na transition
+        player.collider:setLinearVelocity(0, 0)
+
+    end
+
+
     world:update(dt)
 
 
-    -- vzimam X poziciqta na collider-a
-    -- i q prevrushtam v poziciq za sprite-a
-    player.x = player.collider:getX() - player.width / 2
+    -- player position
+    player.x =
+        player.collider:getX()
+        - player.width / 2
 
-    -- sushtoto za Y poziciqta
-    player.y = player.collider:getY() - player.height / 2
+    player.y =
+        player.collider:getY()
+        - player.height / 2
 
 
-    -- update-vam npc-to sled kato veche znam novata poziciq na player-a
-    npc.update()
+    -- fade transition
+    if transitioning == true then
+
+        -- fade out
+        if transitionDirection == 1 then
+
+            transitionAlpha =
+                transitionAlpha
+                + transitionSpeed * dt
+
+
+            if transitionAlpha >= 1 then
+
+                transitionAlpha = 1
+
+                map.changeMap(
+                    world,
+                    nextMap
+                )
+
+                player.collider:setPosition(
+                    nextX,
+                    nextY
+                )
+
+                transitionDirection = -1
+
+            end
+
+
+        -- fade in
+        elseif transitionDirection == -1 then
+
+            transitionAlpha =
+                transitionAlpha
+                - transitionSpeed * dt
+
+
+            if transitionAlpha <= 0 then
+
+                transitionAlpha = 0
+                transitioning = false
+                transitionDirection = 1
+
+                nextMap = nil
+
+            end
+
+        end
+
+    end
 
 end
 
 
-function love.draw() -- risuva vsichko vseki frame
-     map.draw()
-    --customer.draw()
-    player.draw() -- risuva player-a
+function love.draw()
 
-    --npc.draw() -- risuva npc-to i dialogue UI-to
+    map.draw()
 
-    shop.draw() -- risuva stokite / shop obektite
+    player.draw()
 
-    -- pokazva physics collider-ite
-    -- tova e samo za test dokato pravim collision-a
+    -- npc.draw()
+    -- customer.draw()
+
+    shop.draw()
+
+
+    -- collision debug
     world:draw()
 
- love.graphics.print(
-    "X: " .. math.floor(player.x) ..
-    " Y: " .. math.floor(player.y),
-    10,
-    10
-)
+
+         if  map.current == "assets/maps/shopmap.lua"
+    and player.x > 200
+    and player.x < 250
+    and player.y > 50
+    and player.y < 100
+    and player.direction == "up"
+     then
+        love.graphics.setFont(promptFont)
+    love.graphics.print('[E] Enter Storage', 180, 40)
+    end
+
+    if map.current == "assets/maps/storagemap.lua"
+    and player.x > 910
+    and player.x < 970
+    and player.y > 690
+    and player.y < 700
+      and player.direction == "down"
+       then
+        love.graphics.setFont(promptFont)
+    love.graphics.print('[E] Enter Shop', 961, 697)
+    end
+         love.graphics.setFont(promptFont)
+    love.graphics.print("$".. player.money,20, 20)
+    -- fade overlay
+    love.graphics.setColor(
+        0,
+        0,
+        0,
+        transitionAlpha
+    )
+
+    love.graphics.rectangle(
+        "fill",
+        0,
+        0,
+        SCREEN_WIDTH,
+        SCREEN_HEIGHT
+    )
+
+    love.graphics.setColor(1, 1, 1, 1)
+
 end
 
 
-function love.keypressed(key) -- izpulnqva se vednuj pri natiskane na klavish
+function love.keypressed(key)
 
-    -- proverqva dali player-a e do npc-to
-    -- i dali e natisnal E
-    if npc.canIinteract == true and key == "e" then
+    -- bez interakcii po vreme na transition
+    if transitioning == true then
+        return
+    end
 
 
-        -- ako razgovora oshte ne e zapochnal
+    -- npc dialogue
+    if npc.canIinteract == true
+    and key == "e" then
+
         if npc.interacted == false then
 
-            -- otvarqm razgovora
             npc.interacted = true
-
 
         else
 
-            -- proverqvam dali ne sme na poslednata replika
             if npc.dialogueStep < #dialogues.introOrder then
 
-
-                -- ako v momenta govori npc-to
                 if npc.currentspeaker == "npc" then
 
-                    -- minavam na sledvashtata npc replika
-                    npc.currentLine = npc.currentLine + 1
+                    npc.currentLine =
+                        npc.currentLine + 1
 
                 else
 
-                    -- ako govori player-a
-                    -- minavam na sledvashtata negova replika
-                    npc.playerLine = npc.playerLine + 1
+                    npc.playerLine =
+                        npc.playerLine + 1
 
                 end
 
+                npc.dialogueStep =
+                    npc.dialogueStep + 1
 
-                -- minavam na sledvashtata stupka ot celiq razgovor
-                npc.dialogueStep = npc.dialogueStep + 1
-
-
-                -- proverqvam koi govori na novata stupka
                 npc.currentspeaker =
-                    dialogues.introOrder[npc.dialogueStep]
-
+                    dialogues.introOrder[
+                        npc.dialogueStep
+                    ]
 
             else
 
-                -- ako nqma poveche repliki zatvarqm razgovora
                 npc.interacted = false
 
-
-                -- vrushtam npc replikite v nachaloto
                 npc.currentLine = 1
-
-                -- vrushtam player replikite v nachaloto
                 npc.playerLine = 1
-
-                -- vrushtam celiq razgovor na purvata stupka
                 npc.dialogueStep = 1
 
-                -- purvi vinagi zapochva npc-to
                 npc.currentspeaker = "npc"
 
             end
 
         end
-         
-    end
-     if key == "e" 
-    and map.current == "assets/maps/shopmap.lua"
-     and player.x > 200
-     and player.x < 250
-     and player.y > 50
-     and player.y < 100 then
-        map.changeMap(world, "assets/maps/storagemap.lua")
-        player.collider:setPosition(941, 697)
-        return
-end
-     if key == "e" 
-    and map.current == "assets/maps/storagemap.lua"
-     and player.x > 910
-     and player.x < 970
-     and player.y > 690
-     and player.y < 700 then
-        map.changeMap(world, "assets/maps/shopmap.lua")
-        player.collider:setPosition(232,110 )
-        return
-end
 
+    end
+
+
+    -- shop -> storage
+    if key == "e"
+    and map.current == "assets/maps/shopmap.lua"
+    and player.x > 200
+    and player.x < 250
+    and player.y > 50
+    and player.y < 100 then
+
+        startMapTransition(
+            "assets/maps/storagemap.lua",
+            941,
+            697
+        )
+
+        return
+
+    end
+
+
+    -- storage -> shop
+    if key == "e"
+    and map.current == "assets/maps/storagemap.lua"
+    and player.x > 910
+    and player.x < 970
+    and player.y > 690
+    and player.y < 700 then
+
+        startMapTransition(
+            "assets/maps/shopmap.lua",
+            232,
+            110
+        )
+
+        return
+
+    end
 
 end

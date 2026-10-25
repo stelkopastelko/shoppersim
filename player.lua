@@ -12,7 +12,7 @@ player.height = 20
 player.speed = 300
 
 -- pari
-player.money = 100
+player.money = 100  
 
 -- durji li neshto geroqt
 player.hold = false
