@@ -3,7 +3,7 @@ require("npc")
 require("shop")
 require("customer")
 require("map")
-
+require("delivery")
 local wf = require("libraries/windfield")
 
 
@@ -52,22 +52,20 @@ function love.load()
     world = wf.newWorld(0, 0)
 
     npc.load()
-    shop.load()
     player.load(world)
-
     -- starting map
     map.load(
         world,
         "assets/maps/shopmap.lua"
     )
-
-end
+      delivery.load()
+end 
 
 
 function love.update(dt)
 
     -- normal game update
-    if transitioning == false then
+    if transitioning == false and delivery.MenuOpen == false then
 
         customer.update(dt)
         player.update(dt)
@@ -150,24 +148,23 @@ end
 
 
 function love.draw()
-
+   
     map.draw()
-
+    
     player.draw()
 
-    -- npc.draw()
+     --npc.draw()
     -- customer.draw()
 
-    shop.draw()
 
 
     -- collision debug
     world:draw()
-
+     
 
          if  map.current == "assets/maps/shopmap.lua"
-    and player.x > 200
-    and player.x < 250
+    and player.x > 185
+    and player.x < 270
     and player.y > 50
     and player.y < 100
     and player.direction == "up"
@@ -178,9 +175,9 @@ function love.draw()
 
     if map.current == "assets/maps/storagemap.lua"
     and player.x > 910
-    and player.x < 970
+    and player.x < 980
     and player.y > 690
-    and player.y < 700
+    and player.y < 800
       and player.direction == "down"
        then
         love.graphics.setFont(promptFont)
@@ -188,6 +185,7 @@ function love.draw()
     end
          love.graphics.setFont(promptFont)
     love.graphics.print("$".. player.money,20, 20)
+       delivery.draw()
     -- fade overlay
     love.graphics.setColor(
         0,
@@ -205,7 +203,7 @@ function love.draw()
     )
 
     love.graphics.setColor(1, 1, 1, 1)
-
+    
 end
 
 
@@ -269,8 +267,8 @@ function love.keypressed(key)
     -- shop -> storage
     if key == "e"
     and map.current == "assets/maps/shopmap.lua"
-    and player.x > 200
-    and player.x < 250
+    and player.x > 185
+    and player.x < 270
     and player.y > 50
     and player.y < 100 then
 
@@ -289,9 +287,9 @@ function love.keypressed(key)
     if key == "e"
     and map.current == "assets/maps/storagemap.lua"
     and player.x > 910
-    and player.x < 970
+    and player.x < 980
     and player.y > 690
-    and player.y < 700 then
+    and player.y < 800 then
 
         startMapTransition(
             "assets/maps/shopmap.lua",
@@ -302,5 +300,10 @@ function love.keypressed(key)
         return
 
     end
-
+     if key == "tab" then
+        delivery.MenuOpen = not delivery.MenuOpen
+     end
+     if key == "escape" and delivery.MenuOpen == true then
+        delivery.MenuOpen = false
+     end
 end
