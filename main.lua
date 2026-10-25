@@ -4,6 +4,7 @@ require("shop")
 require("customer")
 require("map")
 require("delivery")
+
 local wf = require("libraries/windfield")
 
 
@@ -40,32 +41,45 @@ end
 
 
 function love.load()
-   promptFont = love.graphics.newFont(18)
-    love.graphics.setDefaultFilter("nearest", "nearest")
+
+    promptFont = love.graphics.newFont(18)
+
+    love.graphics.setDefaultFilter(
+        "nearest",
+        "nearest"
+    )
 
     love.window.setMode(
         SCREEN_WIDTH,
         SCREEN_HEIGHT
     )
 
+
     -- physics world
     world = wf.newWorld(0, 0)
 
+
     npc.load()
     player.load(world)
+
+
     -- starting map
     map.load(
         world,
         "assets/maps/shopmap.lua"
     )
-      delivery.load()
-end 
+
+
+    delivery.load()
+
+end
 
 
 function love.update(dt)
 
     -- normal game update
-    if transitioning == false and delivery.MenuOpen == false then
+    if transitioning == false
+    and delivery.MenuOpen == false then
 
         customer.update(dt)
         player.update(dt)
@@ -73,13 +87,52 @@ function love.update(dt)
 
     else
 
-        -- spiram player-a po vreme na transition
-        player.collider:setLinearVelocity(0, 0)
+        -- spiram player-a
+        player.collider:setLinearVelocity(
+            0,
+            0
+        )
 
     end
 
 
     world:update(dt)
+
+
+    -- shop map granici
+    if map.current == "assets/maps/shopmap.lua" then
+
+        local x =
+            player.collider:getX()
+
+        local y =
+            player.collider:getY()
+
+
+        x = math.max(
+            player.width / 2,
+            math.min(
+                SCREEN_WIDTH - player.width / 2,
+                x
+            )
+        )
+
+
+        y = math.max(
+            player.height / 2,
+            math.min(
+                SCREEN_HEIGHT - player.height / 2,
+                y
+            )
+        )
+
+
+        player.collider:setPosition(
+            x,
+            y
+        )
+
+    end
 
 
     -- player position
@@ -95,6 +148,7 @@ function love.update(dt)
     -- fade transition
     if transitioning == true then
 
+
         -- fade out
         if transitionDirection == 1 then
 
@@ -107,15 +161,18 @@ function love.update(dt)
 
                 transitionAlpha = 1
 
+
                 map.changeMap(
                     world,
                     nextMap
                 )
 
+
                 player.collider:setPosition(
                     nextX,
                     nextY
                 )
+
 
                 transitionDirection = -1
 
@@ -133,7 +190,9 @@ function love.update(dt)
             if transitionAlpha <= 0 then
 
                 transitionAlpha = 0
+
                 transitioning = false
+
                 transitionDirection = 1
 
                 nextMap = nil
@@ -148,44 +207,78 @@ end
 
 
 function love.draw()
-   
+
     map.draw()
-    
+
     player.draw()
 
-     --npc.draw()
-    -- customer.draw()
 
+    -- npc.draw()
+    -- customer.draw()
 
 
     -- collision debug
     world:draw()
-     
 
-         if  map.current == "assets/maps/shopmap.lua"
+
+    -- shop -> storage prompt
+    if map.current == "assets/maps/shopmap.lua"
     and player.x > 185
     and player.x < 270
     and player.y > 50
     and player.y < 100
-    and player.direction == "up"
-     then
-        love.graphics.setFont(promptFont)
-    love.graphics.print('[E] Enter Storage', 180, 40)
+    and player.direction == "up" then
+
+        love.graphics.setFont(
+            promptFont
+        )
+
+        love.graphics.print(
+            "[E] Enter Storage",
+            180,
+            40
+        )
+
     end
 
+
+    -- storage -> shop prompt
     if map.current == "assets/maps/storagemap.lua"
     and player.x > 910
     and player.x < 980
     and player.y > 690
     and player.y < 800
-      and player.direction == "down"
-       then
-        love.graphics.setFont(promptFont)
-    love.graphics.print('[E] Enter Shop', 961, 697)
+    and player.direction == "down" then
+
+        love.graphics.setFont(
+            promptFont
+        )
+
+        love.graphics.print(
+            "[E] Enter Shop",
+            961,
+            697
+        )
+
     end
-         love.graphics.setFont(promptFont)
-    love.graphics.print("$".. player.money,20, 20)
-       delivery.draw()
+
+
+    -- money
+    love.graphics.setFont(
+        promptFont
+    )
+
+    love.graphics.print(
+        "$" .. player.money,
+        20,
+        20
+    )
+
+
+    -- delivery menu
+    delivery.draw()
+
+
     -- fade overlay
     love.graphics.setColor(
         0,
@@ -202,8 +295,15 @@ function love.draw()
         SCREEN_HEIGHT
     )
 
-    love.graphics.setColor(1, 1, 1, 1)
-    
+
+    -- reset color
+    love.graphics.setColor(
+        1,
+        1,
+        1,
+        1
+    )
+
 end
 
 
@@ -225,7 +325,9 @@ function love.keypressed(key)
 
         else
 
-            if npc.dialogueStep < #dialogues.introOrder then
+            if npc.dialogueStep
+            < #dialogues.introOrder then
+
 
                 if npc.currentspeaker == "npc" then
 
@@ -239,8 +341,10 @@ function love.keypressed(key)
 
                 end
 
+
                 npc.dialogueStep =
                     npc.dialogueStep + 1
+
 
                 npc.currentspeaker =
                     dialogues.introOrder[
@@ -253,6 +357,7 @@ function love.keypressed(key)
 
                 npc.currentLine = 1
                 npc.playerLine = 1
+
                 npc.dialogueStep = 1
 
                 npc.currentspeaker = "npc"
@@ -267,8 +372,8 @@ function love.keypressed(key)
     -- shop -> storage
     if key == "e"
     and map.current == "assets/maps/shopmap.lua"
-    and player.x > 185
-    and player.x < 270
+    and player.x > 177
+    and player.x < 280
     and player.y > 50
     and player.y < 100 then
 
@@ -300,10 +405,22 @@ function love.keypressed(key)
         return
 
     end
-     if key == "tab" then
-        delivery.MenuOpen = not delivery.MenuOpen
-     end
-     if key == "escape" and delivery.MenuOpen == true then
+
+
+    -- delivery menu
+    if key == "tab" then
+
+        delivery.MenuOpen =
+            not delivery.MenuOpen
+
+    end
+
+
+    if key == "escape"
+    and delivery.MenuOpen == true then
+
         delivery.MenuOpen = false
-     end
+
+    end
+
 end

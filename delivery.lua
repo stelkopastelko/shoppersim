@@ -2,7 +2,8 @@ delivery = {}
 
 delivery.MenuOpen = false
 
-
+delivery.HandCursor = love.mouse.getSystemCursor("hand")
+delivery.NormalCursor = love.mouse.getSystemCursor("arrow")
 -- menu
 delivery.Menu = {
     x = 260,
@@ -12,21 +13,12 @@ delivery.Menu = {
 }
 
 
--- apple card
-delivery.appleCard = {
-    x = delivery.Menu.x + 80,
-    y = delivery.Menu.y + 140,
-    width = 1240,
-    height = 150
-}
-
-
--- apple order button
-delivery.appleButton = {
-    x = delivery.appleCard.x + 1030,
-    y = delivery.appleCard.y + 41,
-    width = 180,
-    height = 55
+-- produktite v reda, v koito shte se pokazvat
+delivery.products = {
+    "apple",
+    "bread",
+    "cheese",
+    "jam"
 }
 
 
@@ -45,7 +37,7 @@ function delivery.load()
     )
 
 
-    -- razmeri na celiq spritesheet
+    -- razmeri na spritesheeta
     local sheetWidth =
         delivery.productSheet:getWidth()
 
@@ -53,7 +45,7 @@ function delivery.load()
         delivery.productSheet:getHeight()
 
 
-    -- razmer na edna kletka
+    -- 4 koloni i 2 reda
     delivery.frameWidth =
         sheetWidth / 4
 
@@ -61,32 +53,188 @@ function delivery.load()
         sheetHeight / 2
 
 
-    -- apple box
-    delivery.appleBoxQuad =
-        love.graphics.newQuad(
-            0,
-            delivery.frameHeight,
-            delivery.frameWidth,
-            delivery.frameHeight,
-            sheetWidth,
-            sheetHeight
-        )
+    -- kutiite sa na vtoriq red
+    delivery.boxQuads = {}
+
+    for i, productName in ipairs(delivery.products) do
+
+        delivery.boxQuads[productName] =
+            love.graphics.newQuad(
+                (i - 1) * delivery.frameWidth,
+                delivery.frameHeight,
+                delivery.frameWidth,
+                delivery.frameHeight,
+                sheetWidth,
+                sheetHeight
+            )
+
+    end
 
 end
 
 
+function delivery.drawProduct(productName, index)
+
+    local product =
+        shop.products[productName]
+
+
+    -- poziciq na reda
+    local cardX =
+        delivery.Menu.x + 80
+
+    local cardY =
+        delivery.Menu.y + 140
+        + (index - 1) * 170
+
+    local cardWidth = 1240
+    local cardHeight = 150
+    
+    local mouseX, mouseY = love.mouse.getPosition()
+
+    -- fon na reda
+    love.graphics.setColor(
+        225 / 255,
+        210 / 255,
+        240 / 255
+    )
+
+    love.graphics.rectangle(
+        "fill",
+        cardX,
+        cardY,
+        cardWidth,
+        cardHeight,
+        14,
+        14
+    )
+
+
+    -- sprite
+    love.graphics.setColor(
+        1,
+        1,
+        1,
+        1
+    )
+
+    love.graphics.draw(
+        delivery.productSheet,
+        delivery.boxQuads[productName],
+        cardX + 15,
+        cardY + 15,
+        0,
+        0.3,
+        0.3
+    )
+
+
+    -- tekst
+    love.graphics.setFont(
+        delivery.menuFont
+    )
+
+    love.graphics.setColor(
+        150 / 255,
+        115 / 255,
+        180 / 255
+    )
+
+
+    -- ime
+    love.graphics.print(
+        product.name,
+        cardX + 300,
+        cardY + 55
+    )
+
+
+    -- broiki
+    love.graphics.print(
+        product.itemsPerBox .. " items",
+        cardX + 550,
+        cardY + 55
+    )
+
+
+    -- cena
+    love.graphics.print(
+        "$" .. product.boxPrice,
+        cardX + 900,
+        cardY + 55
+    )
+
+
+    -- order button
+    local buttonX =
+        cardX + 1030
+
+    local buttonY =
+        cardY + 41
+
+    local buttonWidth = 180
+    local buttonHeight = 55
+  
+       local isHovering =
+    mouseX >= buttonX
+    and mouseX <= buttonX + buttonWidth
+    and mouseY >= buttonY
+    and mouseY <= buttonY + buttonHeight
+
+
+if isHovering == true then
+    love.mouse.setCursor(delivery.HandCursor)
+    love.graphics.setColor(
+        155 / 255,
+        120 / 255,
+        190 / 255
+    )
+
+else
+    love.graphics.setColor(
+        135 / 255,
+        100 / 255,
+        170 / 255
+    )
+end
+
+    love.graphics.rectangle(
+        "fill",
+        buttonX,
+        buttonY,
+        buttonWidth,
+        buttonHeight,
+        10,
+        10
+    )
+
+
+    -- order text
+    love.graphics.setColor(
+        245 / 255,
+        235 / 255,
+        250 / 255
+    )
+
+    love.graphics.print(
+        "Order",
+        buttonX + 14,
+        buttonY + 14   
+    )
+end
+
+
 function delivery.draw()
-
     if delivery.MenuOpen == true then
-
-
-        -- zatumnqvane na fona
+        love.mouse.setCursor(delivery.NormalCursor)
+        -- zatumnqvane na igrata
         love.graphics.setColor(
             0,
             0,
             0,
             0.45
         )
+        
 
         love.graphics.rectangle(
             "fill",
@@ -95,8 +243,8 @@ function delivery.draw()
             SCREEN_WIDTH,
             SCREEN_HEIGHT
         )
-
-
+          love.graphics.setColor(0,0,0,0.3)
+          love.graphics.rectangle("fill", delivery.Menu.x + 15, delivery.Menu.y + 15,delivery.Menu.width, delivery.Menu.height, 18, 18)
         -- fon na menuto
         love.graphics.setColor(
             205 / 255,
@@ -134,7 +282,6 @@ function delivery.draw()
             18
         )
 
-
         -- zaglavie
         love.graphics.setFont(
             delivery.menuFont
@@ -153,44 +300,7 @@ function delivery.draw()
         )
 
 
-        -- apple card
-        love.graphics.setColor(
-            225 / 255,
-            210 / 255,
-            240 / 255
-        )
-
-        love.graphics.rectangle(
-            "fill",
-            delivery.appleCard.x,
-            delivery.appleCard.y,
-            delivery.appleCard.width,
-            delivery.appleCard.height,
-            14,
-            14
-        )
-
-
-        -- apple box sprite
-        love.graphics.setColor(
-            1,
-            1,
-            1,
-            1
-        )
-
-        love.graphics.draw(
-            delivery.productSheet,
-            delivery.appleBoxQuad,
-            delivery.appleCard.x + 15,
-            delivery.appleCard.y + 15,
-            0,
-            0.3,
-            0.3
-        )
-
-
-        -- apple text
+        -- pari
         love.graphics.setColor(
             150 / 255,
             115 / 255,
@@ -198,53 +308,28 @@ function delivery.draw()
         )
 
         love.graphics.print(
-            shop.products.apple.name,
-            delivery.appleCard.x + 300,
-            delivery.appleCard.y + 55
+            "$" .. player.money,
+            delivery.Menu.x + 30,
+            delivery.Menu.y + 20
         )
 
-        love.graphics.print(
-            shop.products.apple.itemsPerBox .. " items",
-            delivery.appleCard.x + 550,
-            delivery.appleCard.y + 55
-        )
+        -- risuvame vsichki produkti
+        for i, productName in ipairs(delivery.products) do
 
-        love.graphics.print(
-            "$" .. shop.products.apple.boxPrice,
-            delivery.appleCard.x + 900,
-            delivery.appleCard.y + 55
-        )
-
-
-        -- apple order button
-        love.graphics.rectangle(
-            "fill",
-            delivery.appleButton.x,
-            delivery.appleButton.y,
-            delivery.appleButton.width,
-            delivery.appleButton.height,
-            10,
-            10
-        )
-
-            -- reset color
-    love.graphics.setColor(
-        1,
-        1,
-        1,
-        1
-    )
-        love.graphics.print("Order", delivery.appleButton.x + 17 , delivery.appleButton.y + 10)
-
+            delivery.drawProduct(
+                productName,
+                i
+            )
+         
+        end
     end
 
 
-    -- reset color
+    -- reset
     love.graphics.setColor(
         1,
         1,
         1,
         1
     )
-  
 end

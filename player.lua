@@ -6,7 +6,7 @@ player = {}
 player.x = 300
 player.y = 300
 player.width = 30
-player.height = 20
+player.height = 2
 
 -- skorost na dvijenie
 player.speed = 300
