@@ -306,9 +306,8 @@ function love.draw()
 
 end
 
-
+ 
 function love.keypressed(key)
-
     -- bez interakcii po vreme na transition
     if transitioning == true then
         return
@@ -422,5 +421,8 @@ function love.keypressed(key)
         delivery.MenuOpen = false
 
     end
-
 end
+    function love.mousepressed(x,y,button)
+     delivery.mousepressed(x,y,button)
+
+    end
