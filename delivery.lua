@@ -17,9 +17,9 @@ delivery.Menu = {
 
 -- pending orders window
 delivery.pendingWindow = {
-    x = 1420,
+    x = 1600,
     y = 880,
-    width = 480,
+    width = 300,
     height = 190
 }
 
@@ -39,7 +39,8 @@ delivery.pendingOrders = {
     cheese = 0,
     jam = 0
 }
-
+delivery.orderQueue = {}
+delivery.deliveryTime = 40
 
 function delivery.load()
       
@@ -49,7 +50,7 @@ function delivery.load()
         32
     )
      
-    delivery.PendingWindowFont =  love.graphics.newFont("assets/fontove/deliveryMenuFont.ttf", 20)
+    delivery.PendingWindowFont =  love.graphics.newFont("assets/fontove/deliveryMenuFont.ttf", 14)
 
     -- spritesheet
     delivery.productSheet = love.graphics.newImage(
@@ -264,6 +265,11 @@ function delivery.drawProduct(productName, index)
 
 end
 
+    function delivery.update(dt)
+        for i , order in ipairs(delivery.orderQueue) do
+      order.timer = order.timer - dt
+        end
+    end
 
 function delivery.draw()
 
@@ -305,7 +311,7 @@ function delivery.draw()
         )
 
         love.graphics.setFont(delivery.PendingWindowFont)
-        love.graphics.print("Pending Deliveries", delivery.pendingWindow.x + 70, delivery.pendingWindow.y + 10)
+        love.graphics.print("Pending Deliveries", delivery.pendingWindow.x + 23, delivery.pendingWindow.y + 10)
 
         for i, productName in ipairs(delivery.products) do
             local boxX =
@@ -314,8 +320,11 @@ function delivery.draw()
     delivery.pendingWindow.y + 35
     + (i - 1) * 37
     
-     love.graphics.setColor(1,1,1)
+    local textX = boxX + 50
+    local textY = boxY + 14
 
+     love.graphics.setColor(1,1,1)
+    
     love.graphics.draw(
     delivery.productSheet,
     delivery.boxQuads[productName],
@@ -325,9 +334,10 @@ function delivery.draw()
     0.10,
     0.10
 )
+               love.graphics.print(delivery.pendingOrders[productName], textX, textY)
         end
-    end
 
+    end
 
     if delivery.MenuOpen == true then
 
@@ -507,7 +517,8 @@ function delivery.mousepressed(x, y, button)
 
                 delivery.pendingOrders[productName] =
                     delivery.pendingOrders[productName] + 1
-
+                 
+                    table.insert(delivery.orderQueue, {productName= productName, timer = delivery.deliveryTime})
             end
 
         end

@@ -41,7 +41,7 @@ end
 
 
 function love.load()
-
+   
     promptFont = love.graphics.newFont(18)
 
     love.graphics.setDefaultFilter(
@@ -71,12 +71,16 @@ function love.load()
 
 
     delivery.load()
-
+    -- muzika
+    shopMusic = love.audio.newSource("assets/music/soundtrack.ogg", 'stream')
+    shopMusic:setVolume(0.05)
+    shopMusic:setLooping(true)
+    shopMusic:play()
 end
 
 
 function love.update(dt)
-
+    delivery.update(dt)
     -- normal game update
     if transitioning == false
     and delivery.MenuOpen == false then
