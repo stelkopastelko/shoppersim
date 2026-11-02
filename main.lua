@@ -4,7 +4,9 @@ require("shop")
 require("customer")
 require("map")
 require("delivery")
-
+require("database")
+require("saves")
+require("saveMenu")
 local wf = require("libraries/windfield")
 
 
@@ -61,14 +63,31 @@ function love.load()
 
     npc.load()
     player.load(world)
+     database.load()
 
+if not saves.exists(1) then
+    local created, err = saves.create(1)
+
+    if not created then
+        error(err)
+    end
+end
+
+local saveData, err = saves.load(1)
+
+if not saveData then
+    error(err)
+end
+
+
+player.money = saveData.money
 
     -- starting map
     map.load(
         world,
         "assets/maps/shopmap.lua"
     )
-
+    database.load()
 
     delivery.load()
     -- muzika
@@ -80,10 +99,11 @@ end
 
 
 function love.update(dt)
+    saveMenu.update(dt)
     delivery.update(dt)
     -- normal game update
     if transitioning == false
-    and delivery.MenuOpen == false then
+    and delivery.MenuOpen == false and saveMenu.isOpen == false then
 
         customer.update(dt)
         player.update(dt)
@@ -98,7 +118,6 @@ function love.update(dt)
         )
 
     end
-
 
     world:update(dt)
 
@@ -211,7 +230,6 @@ end
 
 
 function love.draw()
-
     map.draw()
 
     player.draw()
@@ -223,7 +241,6 @@ function love.draw()
 
     -- collision debug
     world:draw()
-
 
     -- shop -> storage prompt
     if map.current == "assets/maps/shopmap.lua"
@@ -265,8 +282,6 @@ function love.draw()
         )
 
     end
-
-
     -- money
     love.graphics.setFont(
         promptFont
@@ -277,7 +292,6 @@ function love.draw()
         20,
         20
     )
-
 
     -- delivery menu
     delivery.draw()
@@ -307,7 +321,7 @@ function love.draw()
         1,
         1
     )
-
+    saveMenu.draw()
 end
 
  
@@ -370,8 +384,6 @@ function love.keypressed(key)
         end
 
     end
-
-
     -- shop -> storage
     if key == "e"
     and map.current == "assets/maps/shopmap.lua"
@@ -389,7 +401,6 @@ function love.keypressed(key)
         return
 
     end
-
 
     -- storage -> shop
     if key == "e"
@@ -425,8 +436,28 @@ function love.keypressed(key)
         delivery.MenuOpen = false
 
     end
+
+    if key == "v" then
+        saveMenu.toggle()
+    end
 end
     function love.mousepressed(x,y,button)
+
+          if saveMenu.isOpen then
+        saveMenu.mousepressed(x, y, button)
+        return
+    end
+
      delivery.mousepressed(x,y,button)
 
     end
+
+    function love.quit()
+        function love.quit()
+
+    saveMenu.saveCurrent()
+    saves.close()
+
+
+end
+end

@@ -1,3 +1,4 @@
+require('saveMenu')
 delivery = {}
 
 delivery.MenuOpen = false
@@ -274,7 +275,7 @@ end
 function delivery.draw()
 
     -- pending orders window
-    if delivery.MenuOpen == false then
+    if delivery.MenuOpen == false and saveMenu.isOpen == false then
 
         love.graphics.setColor(
             185 / 255,
@@ -464,6 +465,7 @@ function delivery.draw()
 
     end
 
+    love.graphics.setLineWidth(0)
 
     -- reset
     love.graphics.setColor(
