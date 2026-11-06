@@ -63,31 +63,14 @@ function love.load()
 
     npc.load()
     player.load(world)
-     database.load()
 
-if not saves.exists(1) then
-    local created, err = saves.create(1)
-
-    if not created then
-        error(err)
-    end
-end
-
-local saveData, err = saves.load(1)
-
-if not saveData then
-    error(err)
-end
-
-
-player.money = saveData.money
+database.load()
 
     -- starting map
     map.load(
         world,
         "assets/maps/shopmap.lua"
-    )
-    database.load()
+    )   
 
     delivery.load()
     -- muzika
@@ -452,12 +435,21 @@ end
 
     end
 
-    function love.quit()
-        function love.quit()
+-- Запазва прогреса при затваряне на играта
+function love.quit()
 
-    saveMenu.saveCurrent()
+    -- Записва парите и чакащите доставки
+    local success, err = saveMenu.saveCurrent()
+
+    if not success then
+        love.window.showMessageBox(
+            "Save Error",
+            tostring(err),
+            "error"
+        )
+        return true
+    end
+
+    -- Затваря базата данни
     saves.close()
-
-
-end
 end

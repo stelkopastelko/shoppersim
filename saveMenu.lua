@@ -1,6 +1,7 @@
 
 saveMenu = {}
 
+-- Настройки на менюто
 saveMenu.x = 260
 saveMenu.y = 120
 saveMenu.width = 1400
@@ -8,17 +9,82 @@ saveMenu.height = 840
 saveMenu.isOpen = false
 saveMenu.SlotCounts = 3
 
+-- Съобщения и потвърждение за изтриване
 saveMenu.message = ""
 saveMenu.messageTimer = 0
 saveMenu.deleteConfirmSlot = nil
 saveMenu.deleteConfirmTimer = 0
 
+-- Шрифт
 saveMenu.Font = love.graphics.newFont(
     "assets/fontove/deliveryMenuFont.ttf",
     26
 )
 
--- Отваря или затваря менюто
+-- Цветове
+local panelColor = {205/255, 185/255, 225/255}
+local cardColor = {225/255, 210/255, 240/255}
+local borderColor = {95/255, 65/255, 135/255}
+local textColor = {165/255, 140/255, 195/255}
+local titleColor = {75/255, 45/255, 105/255}
+
+-- Размери на бутоните
+local buttonWidth = 250
+local buttonHeight = 60
+
+-- Позиции на бутоните в слота
+local buttonY = {
+    load = 280,
+    save = 350,
+    delete = 420
+}
+
+-- Връща позицията на даден слот
+local function getSlotPosition(i)
+    local x = saveMenu.x + 100 + (i - 1) * 400
+    local y = saveMenu.y + 180
+
+    return x, y
+end
+
+-- Рисува бутон
+local function drawButton(text, x, y)
+
+    love.graphics.setColor(panelColor)
+    love.graphics.rectangle(
+        "fill",
+        x, y,
+        buttonWidth,
+        buttonHeight
+    )
+
+    love.graphics.setColor(borderColor)
+    love.graphics.rectangle(
+        "line",
+        x, y,
+        buttonWidth,
+        buttonHeight
+    )
+
+    love.graphics.setColor(textColor)
+    love.graphics.printf(
+        text,
+        x,
+        y + 18,
+        buttonWidth,
+        "center"
+    )
+end
+
+-- Проверява дали е натиснат бутон
+local function isButtonClicked(x, y, bx, by)
+    return x >= bx
+        and x <= bx + buttonWidth
+        and y >= by
+        and y <= by + buttonHeight
+end
+
+-- Отваря и затваря менюто
 function saveMenu.toggle()
 
     saveMenu.isOpen = not saveMenu.isOpen
@@ -29,9 +95,8 @@ function saveMenu.toggle()
     end
 end
 
--- Показва съобщение за определено време
+-- Показва временно съобщение
 function saveMenu.showMessage(message)
-
     saveMenu.message = message
     saveMenu.messageTimer = 2.5
 end
@@ -40,7 +105,6 @@ end
 function saveMenu.update(dt)
 
     if saveMenu.messageTimer > 0 then
-
         saveMenu.messageTimer = saveMenu.messageTimer - dt
 
         if saveMenu.messageTimer <= 0 then
@@ -49,7 +113,6 @@ function saveMenu.update(dt)
     end
 
     if saveMenu.deleteConfirmTimer > 0 then
-
         saveMenu.deleteConfirmTimer =
             saveMenu.deleteConfirmTimer - dt
 
@@ -59,308 +122,172 @@ function saveMenu.update(dt)
     end
 end
 
+-- Рисува Save менюто
 function saveMenu.draw()
 
-    if saveMenu.isOpen == true then
+    if not saveMenu.isOpen then
+        return
+    end
 
-        -- Затъмнява фона
-        love.graphics.setColor(0, 0, 0, 0.2)
-        love.graphics.rectangle("fill", 0, 0, 1920, 1080)
+    -- Запазва графичните настройки
+    love.graphics.push("all")
+    love.graphics.setFont(saveMenu.Font)
 
-        -- Рисува сянката на панела
-        love.graphics.setColor(0, 0, 0, 0.3)
+    -- Затъмнява фона
+    love.graphics.setColor(0, 0, 0, 0.2)
+    love.graphics.rectangle(
+        "fill",
+        0, 0, 1920, 1080
+    )
+
+    -- Сянка на панела
+    love.graphics.setColor(0, 0, 0, 0.3)
+    love.graphics.rectangle(
+        "fill",
+        saveMenu.x + 20,
+        saveMenu.y + 10,
+        saveMenu.width,
+        saveMenu.height
+    )
+
+    -- Основен панел
+    love.graphics.setColor(panelColor)
+    love.graphics.rectangle(
+        "fill",
+        saveMenu.x,
+        saveMenu.y,
+        saveMenu.width,
+        saveMenu.height
+    )
+
+    -- Рамка на панела
+    love.graphics.setColor(borderColor)
+    love.graphics.rectangle(
+        "line",
+        saveMenu.x,
+        saveMenu.y,
+        saveMenu.width,
+        saveMenu.height
+    )
+
+    -- Заглавие
+    love.graphics.setColor(titleColor)
+    love.graphics.printf(
+        "Save Files",
+        saveMenu.x,
+        saveMenu.y + 15,
+        saveMenu.width,
+        "center"
+    )
+
+    -- Рисува трите слота
+    for i = 1, saveMenu.SlotCounts do
+
+        local slotX, slotY = getSlotPosition(i)
+        local buttonX = slotX + 50
+
+        -- Фон на слота
+        love.graphics.setColor(cardColor)
         love.graphics.rectangle(
             "fill",
-            saveMenu.x + 20,
-            saveMenu.y + 10,
-            saveMenu.width,
-            saveMenu.height
+            slotX,
+            slotY,
+            350,
+            500
         )
 
-        -- Рисува основния панел
-        love.graphics.setColor(
-            205 / 255,
-            185 / 255,
-            225 / 255
-        )
-
-        love.graphics.rectangle(
-            "fill",
-            saveMenu.x,
-            saveMenu.y,
-            saveMenu.width,
-            saveMenu.height
-        )
-
-        -- Добавя рамка на панела
-        love.graphics.setColor(
-            95 / 255,
-            65 / 255,
-            135 / 255
-        )
-
+        -- Рамка на слота
+        love.graphics.setColor(borderColor)
         love.graphics.rectangle(
             "line",
-            saveMenu.x,
-            saveMenu.y,
-            saveMenu.width,
-            saveMenu.height
+            slotX,
+            slotY,
+            350,
+            500
         )
 
-        -- Заглавие на менюто
-        love.graphics.setColor(
-            75 / 255,
-            45 / 255,
-            105 / 255
-        )
-
-        love.graphics.setFont(saveMenu.Font)
-
+        -- Номер на слота
+        love.graphics.setColor(titleColor)
         love.graphics.printf(
-            "Save Files",
-            saveMenu.x,
-            saveMenu.y + 15,
-            saveMenu.width,
+            "Save Slot " .. i,
+            slotX,
+            slotY + 25,
+            350,
             "center"
         )
 
-        -- Създава картите за трите слота
-        for i = 1, saveMenu.SlotCounts do
+        if saves.exists(i) then
 
-            local slotX = saveMenu.x + 100 + (i - 1) * 400
-            local slotY = saveMenu.y + 180
-
-            -- Фон на картата
-            love.graphics.setColor(
-                225 / 255,
-                210 / 255,
-                240 / 255
-            )
-
-            love.graphics.rectangle(
-                "fill",
-                slotX,
-                slotY,
-                350,
-                500
-            )
-
-            -- Рамка на картата
-            love.graphics.setColor(
-                95 / 255,
-                65 / 255,
-                135 / 255
-            )
-
-            love.graphics.rectangle(
-                "line",
-                slotX,
-                slotY,
-                350,
-                500
-            )
-
-            -- Показва номера на слота
+            -- Съществуващ сейв
+            love.graphics.setColor(textColor)
             love.graphics.printf(
-                "Save Slot " .. i,
+                "Save Exists",
                 slotX,
-                slotY + 25,
+                slotY + 170,
                 350,
                 "center"
             )
 
-            -- Проверява дали слотът съдържа сейв
-            if saves.exists(i) then
+            -- Load Game
+            drawButton(
+                "Load Game",
+                buttonX,
+                slotY + buttonY.load
+            )
 
-                -- Показва, че сейвът съществува
-                love.graphics.setColor(
-                    173 / 255,
-                    141 / 255,
-                    200 / 255
-                )
+            -- Save Game
+            drawButton(
+                "Save Game",
+                buttonX,
+                slotY + buttonY.save
+            )
 
-                love.graphics.printf(
-                    "Save Exists",
-                    slotX,
-                    slotY + 200,
-                    350,
-                    "center"
-                )
+            -- Delete / Confirm
+            local deleteText = "Delete"
 
-                -- Бутон за зареждане
-                love.graphics.setColor(
-                    205 / 255,
-                    185 / 255,
-                    225 / 255
-                )
-
-                love.graphics.rectangle(
-                    "fill",
-                    slotX + 50,
-                    slotY + 380,
-                    250,
-                    60
-                )
-
-                -- Рамка на бутона
-                love.graphics.setColor(
-                    95 / 255,
-                    65 / 255,
-                    135 / 255
-                )
-
-                love.graphics.rectangle(
-                    "line",
-                    slotX + 50,
-                    slotY + 380,
-                    250,
-                    60
-                )
-
-                -- Текст на бутона
-                love.graphics.setColor(
-                    165 / 255,
-                    140 / 255,
-                    195 / 255
-                )
-
-                love.graphics.printf(
-                    "Load Game",
-                    slotX,
-                    slotY + 400,
-                    350,
-                    "center"
-                )
-
-                -- Фон на Delete бутона
-                love.graphics.setColor(
-                    205 / 255,
-                    185 / 255,
-                    225 / 255
-                )
-
-                love.graphics.rectangle(
-                    "fill",
-                    slotX + 50,
-                    slotY + 520,
-                    250,
-                    60
-                )
-
-                -- Рамка на Delete бутона
-                love.graphics.setColor(
-                    95 / 255,
-                    65 / 255,
-                    135 / 255
-                )
-
-                love.graphics.rectangle(
-                    "line",
-                    slotX + 50,
-                    slotY + 520,
-                    250,
-                    60
-                )
-
-                -- Текст на Delete бутона
-                love.graphics.setColor(
-                    165 / 255,
-                    140 / 255,
-                    195 / 255
-                )
-
-                love.graphics.printf(
-                    saveMenu.deleteConfirmSlot == i
-                    and "Confirm"
-                    or "Delete",
-                    slotX + 3,
-                    slotY + 535,
-                    350,
-                    "center"
-                )
-
-            else
-
-                -- Показва, че слотът е празен
-                love.graphics.setColor(
-                    173 / 255,
-                    141 / 255,
-                    200 / 255
-                )
-
-                love.graphics.printf(
-                    "Empty Save",
-                    slotX,
-                    slotY + 200,
-                    350,
-                    "center"
-                )
-
-                -- Бутон за започване на нова игра
-                love.graphics.setColor(
-                    205 / 255,
-                    185 / 255,
-                    225 / 255
-                )
-
-                love.graphics.rectangle(
-                    "fill",
-                    slotX + 50,
-                    slotY + 380,
-                    250,
-                    60
-                )
-
-                -- Рамка на бутона
-                love.graphics.setColor(
-                    95 / 255,
-                    65 / 255,
-                    135 / 255
-                )
-
-                love.graphics.rectangle(
-                    "line",
-                    slotX + 50,
-                    slotY + 380,
-                    250,
-                    60
-                )
-
-                -- Текст на бутона
-                love.graphics.setColor(
-                    165 / 255,
-                    140 / 255,
-                    195 / 255
-                )
-
-                love.graphics.printf(
-                    "New game",
-                    slotX + 7,
-                    slotY + 400,
-                    350,
-                    "center"
-                )
+            if saveMenu.deleteConfirmSlot == i then
+                deleteText = "Confirm"
             end
+
+            drawButton(
+                deleteText,
+                buttonX,
+                slotY + buttonY.delete
+            )
+
+        else
+
+            -- Празен слот
+            love.graphics.setColor(textColor)
+            love.graphics.printf(
+                "Empty Save",
+                slotX,
+                slotY + 170,
+                350,
+                "center"
+            )
+
+            -- New Game
+            drawButton(
+                "New Game",
+                buttonX,
+                slotY + buttonY.load
+            )
         end
-
-        -- Показва временните съобщения
-        love.graphics.setColor(
-            165 / 255,
-            140 / 255,
-            195 / 255
-        )
-
-        love.graphics.printf(
-            saveMenu.message,
-            saveMenu.x,
-            saveMenu.y + 780,
-            saveMenu.width,
-            "center"
-        )
-
-        -- Връща цвета към нормалния
-        love.graphics.setColor(1, 1, 1, 1)
     end
+
+    -- Временни съобщения
+    love.graphics.setColor(textColor)
+    love.graphics.printf(
+        saveMenu.message,
+        saveMenu.x,
+        saveMenu.y + 780,
+        saveMenu.width,
+        "center"
+    )
+
+    -- Възстановява графичните настройки
+    love.graphics.pop()
 end
 
 -- Запазва текущия прогрес
@@ -370,20 +297,31 @@ function saveMenu.saveCurrent()
         return true
     end
 
+    -- Прочита информацията от базата
     local data, err = saves.read()
 
     if not data then
         return false, err
     end
 
+    -- Обновява парите
     data.money = player.money
 
-    local success, updateError = saves.update(data)
+-- Взима текущите чакащи поръчки
+data.pendingDeliveries = {}
 
-    return success, updateError
+for _, order in ipairs(delivery.orderQueue) do
+    table.insert(data.pendingDeliveries, {
+        productName = order.productName,
+        timer = order.timer
+    })
 end
 
--- Обработва натисканията на мишката
+    -- Записва в базата
+    return saves.update(data)
+end
+
+-- Обработва натискането на бутоните
 function saveMenu.mousepressed(x, y, button)
 
     if not saveMenu.isOpen or button ~= 1 then
@@ -392,24 +330,27 @@ function saveMenu.mousepressed(x, y, button)
 
     for i = 1, saveMenu.SlotCounts do
 
-        local slotX = saveMenu.x + 100 + (i - 1) * 400
-        local slotY = saveMenu.y + 180
-
+        local slotX, slotY = getSlotPosition(i)
         local buttonX = slotX + 50
 
         if saves.exists(i) then
 
             -- LOAD GAME
-            if x >= buttonX and x <= buttonX + 250
-            and y >= slotY + 380 and y <= slotY + 440 then
+            if isButtonClicked(
+                x, y,
+                buttonX,
+                slotY + buttonY.load
+            ) then
 
-                local saved, saveError = saveMenu.saveCurrent()
+                local saved, saveError =
+                    saveMenu.saveCurrent()
 
                 if not saved then
                     saveMenu.showMessage(tostring(saveError))
                     return
                 end
 
+                -- Зарежда избрания сейв
                 local data, err = saves.load(i)
 
                 if not data then
@@ -418,29 +359,62 @@ function saveMenu.mousepressed(x, y, button)
                 end
 
                 player.money = data.money
-
+                delivery.restoreOrders(data.pendingDeliveries)
                 saveMenu.isOpen = false
                 saveMenu.deleteConfirmSlot = nil
+                saveMenu.deleteConfirmTimer = 0
+
+                return
+            end
+
+            -- SAVE GAME
+            if isButtonClicked(
+                x, y,
+                buttonX,
+                slotY + buttonY.save
+            ) then
+
+                -- Записва само в активния слот
+                if saves.currentSlot ~= i then
+                    saveMenu.showMessage(
+                        "Load this slot first"
+                    )
+                    return
+                end
+
+                local success, err =
+                    saveMenu.saveCurrent()
+
+                if success then
+                    saveMenu.showMessage("Game Saved!")
+                else
+                    saveMenu.showMessage(tostring(err))
+                end
 
                 return
             end
 
             -- DELETE
-            if x >= buttonX and x <= buttonX + 250
-            and y >= slotY + 520 and y <= slotY + 580 then
+            if isButtonClicked(
+                x, y,
+                buttonX,
+                slotY + buttonY.delete
+            ) then
 
-                -- Първото натискане иска потвърждение
+                -- Първи клик: потвърждение
                 if saveMenu.deleteConfirmSlot ~= i then
 
                     saveMenu.deleteConfirmSlot = i
                     saveMenu.deleteConfirmTimer = 3
 
-                    saveMenu.showMessage("Press Again to Delete")
+                    saveMenu.showMessage(
+                        "Press Again to Delete"
+                    )
 
                     return
                 end
 
-                -- Изтрива избрания сейв
+                -- Втори клик: изтриване
                 local success, err = saves.delete(i)
 
                 if success then
@@ -458,10 +432,15 @@ function saveMenu.mousepressed(x, y, button)
         else
 
             -- NEW GAME
-            if x >= buttonX and x <= buttonX + 250
-            and y >= slotY + 380 and y <= slotY + 440 then
+            if isButtonClicked(
+                x, y,
+                buttonX,
+                slotY + buttonY.load
+            ) then
 
-                local saved, saveError = saveMenu.saveCurrent()
+                -- Запазва предишната игра
+                local saved, saveError =
+                    saveMenu.saveCurrent()
 
                 if not saved then
                     saveMenu.showMessage(tostring(saveError))
@@ -469,14 +448,15 @@ function saveMenu.mousepressed(x, y, button)
                 end
 
                 -- Създава нов сейв
-                local created, createError = saves.create(i)
+                local created, createError =
+                    saves.create(i)
 
                 if not created then
                     saveMenu.showMessage(tostring(createError))
                     return
                 end
 
-                -- Зарежда новия сейв
+                -- Зарежда новата игра
                 local data, err = saves.load(i)
 
                 if not data then
@@ -485,9 +465,10 @@ function saveMenu.mousepressed(x, y, button)
                 end
 
                 player.money = data.money
-
+                delivery.restoreOrders(data.pendingDeliveries)
                 saveMenu.isOpen = false
                 saveMenu.deleteConfirmSlot = nil
+                saveMenu.deleteConfirmTimer = 0
 
                 return
             end
