@@ -8,7 +8,7 @@ delivery.MenuOpen = false
 delivery.HandCursor = love.mouse.getSystemCursor("hand")
 delivery.NormalCursor = love.mouse.getSystemCursor("arrow")
 
--- Основно меню за поръчки
+-- Меню за поръчки
 delivery.Menu = {
     x = 260,
     y = 120,
@@ -16,7 +16,7 @@ delivery.Menu = {
     height = 840
 }
 
--- Прозорец с чакащите доставки
+-- Прозорец за чакащи доставки
 delivery.pendingWindow = {
     x = 1600,
     y = 880,
@@ -24,7 +24,7 @@ delivery.pendingWindow = {
     height = 190
 }
 
--- Продуктите в менюто
+-- Продукти
 delivery.products = {
     "apple",
     "bread",
@@ -32,7 +32,6 @@ delivery.products = {
     "jam"
 }
 
--- Брой чакащи кашони от всеки продукт
 delivery.pendingOrders = {
     apple = 0,
     bread = 0,
@@ -40,13 +39,20 @@ delivery.pendingOrders = {
     jam = 0
 }
 
--- Списък с всички направени поръчки
+-- Състояние на доставките
 delivery.orderQueue = {}
+delivery.arrivedBoxes = {}
+delivery.boxColliders = {}
 
--- Време за доставка в секунди
-delivery.deliveryTime = 40
+-- Носени и оставени кашони
+delivery.carriedBox = nil
+delivery.droppedBoxes = {}
 
--- Зарежда шрифтовете и изображенията
+-- Време за доставка
+delivery.deliveryTime = 5
+
+
+-- ЗАРЕЖДАНЕ
 function delivery.load()
 
     delivery.menuFont = love.graphics.newFont(
@@ -66,13 +72,11 @@ function delivery.load()
     local sheetWidth = delivery.productSheet:getWidth()
     local sheetHeight = delivery.productSheet:getHeight()
 
-    -- Spritesheet с 4 колони и 2 реда
     delivery.frameWidth = sheetWidth / 4
     delivery.frameHeight = sheetHeight / 2
 
     delivery.boxQuads = {}
 
-    -- Кашоните са на втория ред
     for i, productName in ipairs(delivery.products) do
 
         delivery.boxQuads[productName] =
@@ -87,53 +91,74 @@ function delivery.load()
     end
 end
 
--- Възстановява доставките от запазената игра
+
+-- ВЪЗСТАНОВЯВАНЕ НА ПОРЪЧКИ
 function delivery.restoreOrders(orders)
 
-    -- Изчиства поръчките от предишната игра
     delivery.orderQueue = {}
 
-    -- Нулира броячите
     for productName in pairs(delivery.pendingOrders) do
         delivery.pendingOrders[productName] = 0
     end
 
-    -- Зарежда поръчките от базата данни
     for _, order in ipairs(orders or {}) do
 
         local productName = order.productName
         local timer = order.timer
 
-        -- Проверява дали продуктът и времето са валидни
         if delivery.pendingOrders[productName] ~= nil
             and type(timer) == "number" then
 
-            -- Възстановява отделната поръчка
             table.insert(delivery.orderQueue, {
                 productName = productName,
                 timer = math.max(0, timer)
             })
 
-            -- Увеличава броя на чакащите кашони
             delivery.pendingOrders[productName] =
                 delivery.pendingOrders[productName] + 1
         end
     end
 end
 
--- Обновява оставащото време на поръчките
+
+-- ОБНОВЯВАНЕ НА ДОСТАВКИТЕ
 function delivery.update(dt)
 
-    for _, order in ipairs(delivery.orderQueue) do
+    for i = #delivery.orderQueue, 1, -1 do
+
+        local order = delivery.orderQueue[i]
 
         if order.timer > 0 then
             order.timer = math.max(0, order.timer - dt)
         end
 
+        if order.timer <= 0 then
+
+            -- Добавя пристигнал кашон
+            table.insert(
+                delivery.arrivedBoxes,
+                order.productName
+            )
+
+            -- Колизия, ако играчът е в склада
+            if map.current == "assets/maps/storagemap.lua" then
+
+                delivery.createBoxColliders(
+                    #delivery.arrivedBoxes,
+                    world
+                )
+            end
+
+            table.remove(delivery.orderQueue, i)
+
+            delivery.pendingOrders[order.productName] =
+                delivery.pendingOrders[order.productName] - 1
+        end
     end
 end
 
--- Рисува един продукт в менюто
+
+-- РИСУВАНЕ НА ПРОДУКТ В МЕНЮТО
 function delivery.drawProduct(productName, index)
 
     local product = shop.products[productName]
@@ -147,7 +172,7 @@ function delivery.drawProduct(productName, index)
 
     local mouseX, mouseY = love.mouse.getPosition()
 
-    -- Фон на продукта
+    -- Фон
     love.graphics.setColor(
         225 / 255,
         210 / 255,
@@ -164,7 +189,7 @@ function delivery.drawProduct(productName, index)
         14
     )
 
-    -- Изображение на кашона
+    -- Кашон
     love.graphics.setColor(1, 1, 1, 1)
 
     love.graphics.draw(
@@ -177,7 +202,6 @@ function delivery.drawProduct(productName, index)
         0.3
     )
 
-    -- Текст за продукта
     love.graphics.setFont(delivery.menuFont)
 
     love.graphics.setColor(
@@ -207,7 +231,7 @@ function delivery.drawProduct(productName, index)
         cardY + 55
     )
 
-    -- Позиция на бутона за поръчка
+    -- Бутон Order
     local buttonX = cardX + 1030
     local buttonY = cardY + 41
 
@@ -220,7 +244,6 @@ function delivery.drawProduct(productName, index)
         and mouseY >= buttonY
         and mouseY <= buttonY + buttonHeight
 
-    -- Цвят според парите и мишката
     if player.money < product.boxPrice then
 
         love.graphics.setColor(
@@ -248,7 +271,6 @@ function delivery.drawProduct(productName, index)
         )
     end
 
-    -- Бутон Order
     love.graphics.rectangle(
         "fill",
         buttonX,
@@ -259,7 +281,6 @@ function delivery.drawProduct(productName, index)
         10
     )
 
-    -- Текст на бутона
     love.graphics.setColor(
         245 / 255,
         235 / 255,
@@ -273,9 +294,11 @@ function delivery.drawProduct(productName, index)
     )
 end
 
--- Рисува прозореца с чакащите доставки
+
+-- ПРОЗОРЕЦ С ЧАКАЩИ ДОСТАВКИ
 function delivery.drawPendingWindow()
 
+    -- Фон
     love.graphics.setColor(
         185 / 255,
         165 / 255,
@@ -317,15 +340,12 @@ function delivery.drawPendingWindow()
         delivery.pendingWindow.y + 10
     )
 
-    -- Показва кашоните и техните количества
+    -- Брой поръчани кашони
     for i, productName in ipairs(delivery.products) do
 
         local boxX = delivery.pendingWindow.x + 25
         local boxY = delivery.pendingWindow.y + 35
             + (i - 1) * 37
-
-        local textX = boxX + 50
-        local textY = boxY + 14
 
         love.graphics.setColor(1, 1, 1, 1)
 
@@ -341,29 +361,27 @@ function delivery.drawPendingWindow()
 
         love.graphics.print(
             delivery.pendingOrders[productName],
-            textX,
-            textY
+            boxX + 50,
+            boxY + 14
         )
     end
 end
 
--- Рисува менюто за доставки
+
+-- ГЛАВНО МЕНЮ ЗА ДОСТАВКИ
 function delivery.draw()
 
-    -- Запазва цветовете, шрифта и останалите настройки
     love.graphics.push("all")
 
-    -- Връща нормалния курсор
     love.mouse.setCursor(delivery.NormalCursor)
 
-    -- Показва чакащите доставки извън менютата
     if not delivery.MenuOpen and not saveMenu.isOpen then
         delivery.drawPendingWindow()
     end
 
     if delivery.MenuOpen then
 
-        -- Затъмнява играта
+        -- Затъмняване
         love.graphics.setColor(0, 0, 0, 0.45)
 
         love.graphics.rectangle(
@@ -374,7 +392,7 @@ function delivery.draw()
             SCREEN_HEIGHT
         )
 
-        -- Сянка на менюто
+        -- Сянка
         love.graphics.setColor(0, 0, 0, 0.3)
 
         love.graphics.rectangle(
@@ -387,7 +405,7 @@ function delivery.draw()
             18
         )
 
-        -- Фон на менюто
+        -- Фон
         love.graphics.setColor(
             205 / 255,
             185 / 255,
@@ -438,7 +456,7 @@ function delivery.draw()
             delivery.Menu.y + 20
         )
 
-        -- Пари на играча
+        -- Пари
         love.graphics.setColor(
             150 / 255,
             115 / 255,
@@ -451,20 +469,19 @@ function delivery.draw()
             delivery.Menu.y + 20
         )
 
-        -- Показва всички продукти
+        -- Продукти
         for i, productName in ipairs(delivery.products) do
             delivery.drawProduct(productName, i)
         end
     end
 
-    -- Възстановява графичните настройки
     love.graphics.pop()
 end
 
--- Обработва поръчките чрез мишката
+
+-- ПОРЪЧВАНЕ С МИШКАТА
 function delivery.mousepressed(x, y, button)
 
-    -- Поръчва само при отворено меню и ляв клик
     if not delivery.MenuOpen or button ~= 1 then
         return
     end
@@ -483,24 +500,22 @@ function delivery.mousepressed(x, y, button)
 
         local product = shop.products[productName]
 
-        -- Проверява дали е натиснат бутонът Order
         if x >= buttonX
             and x <= buttonX + buttonWidth
             and y >= buttonY
             and y <= buttonY + buttonHeight then
 
-            -- Проверява дали парите са достатъчни
             if player.money >= product.boxPrice then
 
-                -- Изважда цената
+                -- Плаща за кашона
                 player.money =
                     player.money - product.boxPrice
 
-                -- Увеличава броя на чакащите кашони
+                -- Увеличава броя чакащи доставки
                 delivery.pendingOrders[productName] =
                     delivery.pendingOrders[productName] + 1
 
-                -- Добавя нова поръчка с отделен таймер
+                -- Създава поръчка с таймер
                 table.insert(delivery.orderQueue, {
                     productName = productName,
                     timer = delivery.deliveryTime
@@ -510,4 +525,279 @@ function delivery.mousepressed(x, y, button)
             return
         end
     end
+end
+
+
+-- РИСУВА ПРИСТИГНАЛИТЕ КАШОНИ
+function delivery.DrawArrivedBoxes()
+
+    for i, productName in ipairs(delivery.arrivedBoxes) do
+
+        local boxX = 1112 + (i - 1) * 60
+        local boxY = 409
+
+        love.graphics.setColor(1, 1, 1, 1)
+
+        love.graphics.draw(
+            delivery.productSheet,
+            delivery.boxQuads[productName],
+            boxX,
+            boxY,
+            0,
+            0.15,
+            0.15
+        )
+    end
+end
+
+
+-- КОЛИЗИИ НА ПРИСТИГНАЛИТЕ КАШОНИ
+function delivery.createBoxColliders(i, world)
+
+    if delivery.boxColliders[i] then
+        return
+    end
+
+    local boxX = 1112 + (i - 1) * 60
+    local boxY = 409
+
+    local collider = world:newRectangleCollider(
+        boxX + 13,
+        boxY + 8,
+        43,
+        45
+    )
+
+    collider:setType("static")
+
+    delivery.boxColliders[i] = collider
+end
+
+
+-- ПРЕМАХВА КОЛИЗИИТЕ НА ДОСТАВКИТЕ
+function delivery.clearBoxColliders()
+
+    for _, collider in pairs(delivery.boxColliders) do
+        collider:destroy()
+    end
+
+    delivery.boxColliders = {}
+end
+
+
+-- НАМИРА БЛИЗЪК ПРИСТИГНАЛ КАШОН
+function delivery.getNearbyBox()
+
+    local playerX, playerY =
+        player.collider:getPosition()
+
+    local closestIndex = nil
+    local closestDistance = 50
+
+    for i, collider in pairs(delivery.boxColliders) do
+
+        local boxX, boxY = collider:getPosition()
+
+        local distance = math.sqrt(
+            (playerX - boxX)^2 +
+            (playerY - boxY)^2
+        )
+
+        if distance <= closestDistance then
+
+            closestDistance = distance
+            closestIndex = i
+        end
+    end
+
+    if closestIndex then
+        return closestIndex, delivery.arrivedBoxes[closestIndex]
+    end
+
+    return nil, nil
+end
+
+
+-- СЪЗДАВА КОЛИЗИЯ НА ОСТАВЕН КАШОН
+function delivery.createDroppedBoxCollider(box, world)
+
+    if box.collider then
+        return
+    end
+
+    local width = 43
+    local height = 45
+
+    box.collider = world:newRectangleCollider(
+        box.x - width / 2,
+        box.y - height / 2,
+        width,
+        height
+    )
+
+    box.collider:setType("static")
+end
+
+
+-- ПРЕМАХВА КОЛИЗИИТЕ НА ОСТАВЕНИТЕ КАШОНИ
+function delivery.clearDroppedBoxColliders()
+
+    for _, box in ipairs(delivery.droppedBoxes) do
+
+        if box.collider then
+            box.collider:destroy()
+            box.collider = nil
+        end
+    end
+end
+
+
+-- ВЪЗСТАНОВЯВА КОЛИЗИИТЕ ПРИ СМЯНА НА КАРТА
+function delivery.loadDroppedBoxColliders(world)
+
+    for _, box in ipairs(delivery.droppedBoxes) do
+
+        if box.mapPath == map.current then
+
+            delivery.createDroppedBoxCollider(
+                box,
+                world
+            )
+        end
+    end
+end
+
+
+-- ПУСКАНЕ НА КАШОН С Q
+function delivery.dropBox()
+
+    if delivery.carriedBox == nil then
+        return
+    end
+
+    local x, y = player.collider:getPosition()
+
+    -- Позиция пред играча
+    local offset = 60
+
+    if player.direction == "up" then
+        y = y - offset
+
+    elseif player.direction == "down" then
+        y = y + offset
+
+    elseif player.direction == "left" then
+        x = x - offset
+
+    elseif player.direction == "right" then
+        x = x + offset
+    end
+
+    -- Създава оставения кашон
+    local box = {
+        productName = delivery.carriedBox,
+        x = x,
+        y = y,
+        mapPath = map.current
+    }
+
+    table.insert(delivery.droppedBoxes, box)
+
+    -- Добавя физическа колизия
+    delivery.createDroppedBoxCollider(box, world)
+
+    -- Освобождава ръцете на играча
+    delivery.carriedBox = nil
+end
+
+
+-- РИСУВА ОСТАВЕНИТЕ КАШОНИ
+function delivery.drawDroppedBoxes()
+
+    for _, box in ipairs(delivery.droppedBoxes) do
+
+        if box.mapPath == map.current then
+
+            local scale = 0.15
+
+            local boxWidth =
+                delivery.frameWidth * scale
+
+            local boxHeight =
+                delivery.frameHeight * scale
+
+            love.graphics.setColor(1, 1, 1, 1)
+
+            love.graphics.draw(
+                delivery.productSheet,
+                delivery.boxQuads[box.productName],
+                box.x - boxWidth / 2,
+                box.y - boxHeight / 2,
+                0,
+                scale,
+                scale
+            )
+        end
+    end
+end
+
+
+-- НАМИРА НАЙ-БЛИЗКИЯ ОСТАВЕН КАШОН
+function delivery.getNearbyDroppedBox()
+
+    local playerX, playerY =
+        player.collider:getPosition()
+
+    local closestIndex = nil
+    local closestDistance = 75
+
+    for i, box in ipairs(delivery.droppedBoxes) do
+
+        -- Проверява само кашоните на текущата карта
+        if box.mapPath == map.current
+            and box.collider then
+
+            local distance = math.sqrt(
+                (playerX - box.x)^2 +
+                (playerY - box.y)^2
+            )
+
+            if distance <= closestDistance then
+
+                closestDistance = distance
+                closestIndex = i
+            end
+        end
+    end
+
+    return closestIndex
+end
+
+
+-- ВЗЕМАНЕ НА ОСТАВЕН КАШОН
+function delivery.pickUpDroppedBox(index)
+
+    if delivery.carriedBox ~= nil then
+        return false
+    end
+
+    local box = delivery.droppedBoxes[index]
+
+    if not box or box.mapPath ~= map.current then
+        return false
+    end
+
+    -- Запомня продукта
+    delivery.carriedBox = box.productName
+
+    -- Премахва колизията
+    if box.collider then
+        box.collider:destroy()
+        box.collider = nil
+    end
+
+    -- Премахва кашона от земята
+    table.remove(delivery.droppedBoxes, index)
+
+    return true
 end

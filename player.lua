@@ -1,47 +1,51 @@
+
 local anim8 = require("libraries/anim8")
 
 player = {}
 
--- poziciq i razmer na player-a
+-- Позиция и размери на играча
 player.x = 300
 player.y = 300
 player.width = 30
 player.height = 2
 
--- skorost na dvijenie
+-- Скорост на движение
 player.speed = 300
 
--- pari
-player.money = 100  
+-- Пари
+player.money = 100
 
--- durji li neshto geroqt
+-- Състояние на играча
 player.hold = false
 player.helditem = nil
+player.direction = "down"
 
 
+-- Зареждане на играча
 function player.load(world)
 
-    -- pravq collider-a na player-a
+    -- Създаване на колизията
     player.collider = world:newRectangleCollider(
         player.x + player.width / 2,
         player.y + player.height / 2,
         player.width,
         player.height
     )
-       player.spriteOffsetX = 88
-        player.spriteOffsetY = 150
-    -- ne pozvolqva collider-a da se vurti
+
     player.collider:setFixedRotation(true)
 
-    -- posokata v koqto gleda player-a
+    -- Отместване на спрайта
+    player.spriteOffsetX = 88
+    player.spriteOffsetY = 150
+
     player.direction = "down"
 
-    -- zarejdam spritesheet-a
+    -- Зареждане на spritesheet
     player.spritesheet = love.graphics.newImage(
         "assets/playersprite.png"
     )
 
-    -- razdelqm spritesheet-a na frame-ove
+    -- Разделяне на spritesheet на кадри
     player.grid = anim8.newGrid(
         176,
         160,
@@ -49,133 +53,162 @@ function player.load(world)
         player.spritesheet:getHeight()
     )
 
-    -- tablica s animaciite
+    -- Таблица с анимациите
     player.animations = {}
 
-    -- idle animacii
-    player.animations.idleDown =
-        anim8.newAnimation(player.grid("1-6", 5), 0.15)
 
-    player.animations.idleLeft =
-        anim8.newAnimation(player.grid("1-6", 6), 0.15)
+    -- ХОДЕНЕ (редове 1-4)
 
-    player.animations.idleRight =
-        anim8.newAnimation(player.grid("1-6", 7), 0.15)
-
-    player.animations.idleUp =
-        anim8.newAnimation(player.grid("1-6", 8), 0.15)
-
-
-    -- walk animacii
     player.animations.walkDown =
-        anim8.newAnimation(player.grid("1-6", 1), 0.12)
+        anim8.newAnimation(
+            player.grid("1-6", 1),
+            0.12
+        )
 
     player.animations.walkLeft =
-        anim8.newAnimation(player.grid("1-6", 2), 0.12)
+        anim8.newAnimation(
+            player.grid("1-6", 2),
+            0.12
+        )
 
     player.animations.walkRight =
-        anim8.newAnimation(player.grid("1-6", 3), 0.12)
+        anim8.newAnimation(
+            player.grid("1-6", 3),
+            0.12
+        )
 
     player.animations.walkUp =
-        anim8.newAnimation(player.grid("1-6", 4), 0.12)
+        anim8.newAnimation(
+            player.grid("1-6", 4),
+            0.12
+        )
 
 
-    -- animaciqta s koqto zapochva player-a
-    player.currentAnimation = player.animations.idleDown
+    -- СТОЕНЕ НА МЯСТО (редове 5-8)
 
+    player.animations.idleDown =
+        anim8.newAnimation(
+            player.grid("1-6", 5),
+            0.15
+        )
+
+    player.animations.idleLeft =
+        anim8.newAnimation(
+            player.grid("1-6", 6),
+            0.15
+        )
+
+    player.animations.idleRight =
+        anim8.newAnimation(
+            player.grid("1-6", 7),
+            0.15
+        )
+
+    player.animations.idleUp =
+        anim8.newAnimation(
+            player.grid("1-6", 8),
+            0.15
+        )
+
+
+    -- Начална анимация
+    player.currentAnimation =
+        player.animations.idleDown
 end
 
 
+-- Обновяване на играча
 function player.update(dt)
 
-    -- skorost po X i Y
     local vx = 0
     local vy = 0
 
-
-    -- izbiram idle animaciq spored poslednata posoka
-    if player.direction == "up" then
-
-        player.currentAnimation = player.animations.idleUp
-
-    elseif player.direction == "down" then
-
-        player.currentAnimation = player.animations.idleDown
-
-    elseif player.direction == "left" then
-
-        player.currentAnimation = player.animations.idleLeft
-
-    elseif player.direction == "right" then
-
-        player.currentAnimation = player.animations.idleRight
-
-    end
+    -- Проверява дали играчът носи кашон
+    player.hold = delivery.carriedBox ~= nil
+    player.helditem = delivery.carriedBox
 
 
-    -- dvijenie nagore
-    if love.keyboard.isDown("escape") then
-        love.event.quit()
-    end
+    -- Движение нагоре
     if love.keyboard.isDown("w") then
 
         vy = -player.speed
-
-        player.currentAnimation = player.animations.walkUp
         player.direction = "up"
-
     end
 
 
-    -- dvijenie nadolu
+    -- Движение надолу
     if love.keyboard.isDown("s") then
 
         vy = player.speed
-
-        player.currentAnimation = player.animations.walkDown
         player.direction = "down"
-
     end
 
 
-    -- dvijenie nalqvo
+    -- Движение наляво
     if love.keyboard.isDown("a") then
 
         vx = -player.speed
-
-        player.currentAnimation = player.animations.walkLeft
         player.direction = "left"
-
     end
 
 
-    -- dvijenie nadqsno
+    -- Движение надясно
     if love.keyboard.isDown("d") then
 
         vx = player.speed
-
-        player.currentAnimation = player.animations.walkRight
         player.direction = "right"
-
     end
 
 
-    -- davam skorostta na collider-a
+    -- Проверява дали играчът се движи
+    local isMoving = vx ~= 0 or vy ~= 0
+
+
+    -- Избира нормална анимация
+    local animationType
+
+    if isMoving then
+        animationType = "walk"
+    else
+        animationType = "idle"
+    end
+
+
+    -- Посоките на анимациите
+    local directionSuffixes = {
+        up = "Up",
+        down = "Down",
+        left = "Left",
+        right = "Right"
+    }
+
+    -- Например walkDown или idleLeft
+    local animationName =
+        animationType ..
+        directionSuffixes[player.direction]
+
+
+    -- Избира текущата анимация
+    player.currentAnimation =
+        player.animations[animationName]
+
+
+    -- Движение на колизията
     player.collider:setLinearVelocity(vx, vy)
 
-    -- update-vam tekushtata animaciq
+    -- Обновяване на анимацията
     player.currentAnimation:update(dt)
-
 end
 
 
+-- Рисуване на играча
 function player.draw()
 
-    -- risuvam tekushtata animaciq na player-a
-player.currentAnimation:draw(
-    player.spritesheet,
-    player.collider:getX() - player.spriteOffsetX,
-    player.collider:getY() - player.spriteOffsetY
-)
+    love.graphics.setColor(1, 1, 1, 1)
 
+    player.currentAnimation:draw(
+        player.spritesheet,
+        player.collider:getX() - player.spriteOffsetX,
+        player.collider:getY() - player.spriteOffsetY
+    )
 end

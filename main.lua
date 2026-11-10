@@ -1,3 +1,5 @@
+
+-- Зареждане на модулите
 require("player")
 require("npc")
 require("shop")
@@ -7,15 +9,16 @@ require("delivery")
 require("database")
 require("saves")
 require("saveMenu")
+
 local wf = require("libraries/windfield")
 
 
--- screen
+-- Размери на екрана
 SCREEN_WIDTH = 1920
 SCREEN_HEIGHT = 1080
 
 
--- map transition
+-- Настройки за смяна на картите
 transitionAlpha = 0
 transitioning = false
 transitionSpeed = 2
@@ -26,9 +29,10 @@ nextX = 0
 nextY = 0
 
 
+-- Започва смяна на карта
 function startMapTransition(mapPath, x, y)
 
-    if transitioning == true then
+    if transitioning then
         return
     end
 
@@ -38,55 +42,97 @@ function startMapTransition(mapPath, x, y)
     nextMap = mapPath
     nextX = x
     nextY = y
-
 end
 
 
+-- Вземане на кашон от склада
+local function pickUpNearbyBox()
+
+    -- Играчът може да носи само един кашон
+    if delivery.carriedBox ~= nil then
+        return false
+    end
+
+    -- Намира близкия кашон
+    local boxIndex, productName = delivery.getNearbyBox()
+
+    if not boxIndex then
+        return false
+    end
+
+    -- Запомня какъв кашон носи играчът
+    delivery.carriedBox = productName
+
+    -- Премахва кашона от склада
+    table.remove(delivery.arrivedBoxes, boxIndex)
+
+    -- Премахва старите колизии
+    delivery.clearBoxColliders()
+
+    -- Пренарежда колизиите на останалите кашони
+    for i = 1, #delivery.arrivedBoxes do
+        delivery.createBoxColliders(i, world)
+    end
+
+    return true
+end
+
+
+-- Стартиране на играта
 function love.load()
-   
+
     promptFont = love.graphics.newFont(18)
 
-    love.graphics.setDefaultFilter(
-        "nearest",
-        "nearest"
-    )
+    -- Настройки на графиката
+    love.graphics.setDefaultFilter("nearest", "nearest")
 
     love.window.setMode(
         SCREEN_WIDTH,
         SCREEN_HEIGHT
     )
 
-
-    -- physics world
+    -- Физичен свят
     world = wf.newWorld(0, 0)
 
-
+    -- Зарежда системите
     npc.load()
     player.load(world)
 
-database.load()
+    database.load()
 
-    -- starting map
+    -- Начална карта
     map.load(
         world,
         "assets/maps/shopmap.lua"
-    )   
+    )
 
+    -- Система за доставки
     delivery.load()
-    -- muzika
-    shopMusic = love.audio.newSource("assets/music/soundtrack.ogg", 'stream')
+    delivery.carriedBox = nil
+
+    -- Фонова музика
+    shopMusic = love.audio.newSource(
+        "assets/music/soundtrack.ogg",
+        "stream"
+    )
+
     shopMusic:setVolume(0.05)
     shopMusic:setLooping(true)
     shopMusic:play()
 end
 
 
+-- Обновяване на играта
 function love.update(dt)
+
+    -- Обновява менютата и доставките
     saveMenu.update(dt)
     delivery.update(dt)
-    -- normal game update
-    if transitioning == false
-    and delivery.MenuOpen == false and saveMenu.isOpen == false then
+
+    -- Нормално движение
+    if not transitioning
+        and not delivery.MenuOpen
+        and not saveMenu.isOpen then
 
         customer.update(dt)
         player.update(dt)
@@ -94,26 +140,19 @@ function love.update(dt)
 
     else
 
-        -- spiram player-a
-        player.collider:setLinearVelocity(
-            0,
-            0
-        )
-
+        -- Спира играча при отворено меню
+        player.collider:setLinearVelocity(0, 0)
     end
 
+    -- Обновява физиката
     world:update(dt)
 
 
-    -- shop map granici
+    -- Граници на магазина
     if map.current == "assets/maps/shopmap.lua" then
 
-        local x =
-            player.collider:getX()
-
-        local y =
-            player.collider:getY()
-
+        local x = player.collider:getX()
+        local y = player.collider:getY()
 
         x = math.max(
             player.width / 2,
@@ -123,7 +162,6 @@ function love.update(dt)
             )
         )
 
-
         y = math.max(
             player.height / 2,
             math.min(
@@ -132,143 +170,201 @@ function love.update(dt)
             )
         )
 
-
-        player.collider:setPosition(
-            x,
-            y
-        )
-
+        player.collider:setPosition(x, y)
     end
 
 
-    -- player position
-    player.x =
-        player.collider:getX()
-        - player.width / 2
+    -- Смяна между магазина и склада
+    if transitioning then
 
-    player.y =
-        player.collider:getY()
-        - player.height / 2
-
-
-    -- fade transition
-    if transitioning == true then
-
-
-        -- fade out
+        -- Затъмняване
         if transitionDirection == 1 then
 
             transitionAlpha =
-                transitionAlpha
-                + transitionSpeed * dt
-
+                transitionAlpha + transitionSpeed * dt
 
             if transitionAlpha >= 1 then
 
                 transitionAlpha = 1
 
+                -- Премахва колизиите на кашоните
+                delivery.clearBoxColliders()
 
-                map.changeMap(
-                    world,
-                    nextMap
-                )
+                -- Сменя картата
+                map.changeMap(world, nextMap)
 
+                -- Създава колизии, ако влизаме в склада
+                if map.current == "assets/maps/storagemap.lua" then
 
+                    for i = 1, #delivery.arrivedBoxes do
+
+                        delivery.createBoxColliders(
+                            i,
+                            world
+                        )
+                    end
+                end
+
+                -- Премества играча
                 player.collider:setPosition(
                     nextX,
                     nextY
                 )
 
-
                 transitionDirection = -1
-
             end
 
-
-        -- fade in
+        -- Появяване на новата карта
         elseif transitionDirection == -1 then
 
             transitionAlpha =
-                transitionAlpha
-                - transitionSpeed * dt
-
+                transitionAlpha - transitionSpeed * dt
 
             if transitionAlpha <= 0 then
 
                 transitionAlpha = 0
-
                 transitioning = false
-
                 transitionDirection = 1
 
                 nextMap = nil
-
             end
-
         end
-
     end
 
+
+    -- Обновява координатите на играча
+    player.x =
+        player.collider:getX() - player.width / 2
+
+    player.y =
+        player.collider:getY() - player.height / 2
 end
 
 
+-- Рисуване на играта
 function love.draw()
+
+    -- Карта
     map.draw()
 
+    -- Рисува оставените кашони
+delivery.drawDroppedBoxes()
+
+    -- Кашони в склада
+    if map.current == "assets/maps/storagemap.lua" then
+        delivery.DrawArrivedBoxes()
+    end
+
+
+    -- Играч
     player.draw()
 
 
+    -- Рисува носения кашон
+    if delivery.carriedBox then
+
+        local scale = 0.15
+
+        local boxWidth =
+            delivery.frameWidth * scale
+
+        local boxHeight =
+            delivery.frameHeight * scale
+
+        -- Позиция пред играча
+        local boxX =
+            player.x + player.width / 2 - boxWidth / 2
+
+        local boxY =
+            player.y + player.height / 2 - boxHeight / 2
+
+        love.graphics.setColor(1, 1, 1, 1)
+
+        love.graphics.draw(
+            delivery.productSheet,
+            delivery.boxQuads[delivery.carriedBox],
+            boxX,
+            boxY,
+            0,
+            scale,
+            scale
+        )
+    end
+
+
+    -- Надпис за вземане на кашон
+    if map.current == "assets/maps/storagemap.lua"
+        and delivery.carriedBox == nil
+        and not delivery.MenuOpen
+        and not saveMenu.isOpen then
+
+        local boxIndex, productName =
+            delivery.getNearbyBox()
+
+        if boxIndex then
+
+            love.graphics.setFont(promptFont)
+            love.graphics.setColor(1, 1, 1, 1)
+
+            love.graphics.print(
+                "[E] Pick up " .. productName,
+                player.x - 20,
+                player.y - 40
+            )
+        end
+    end
+
+
+    -- NPC и клиенти
     -- npc.draw()
     -- customer.draw()
 
 
-    -- collision debug
+    -- Показва колизиите за тестване
     world:draw()
 
-    -- shop -> storage prompt
-    if map.current == "assets/maps/shopmap.lua"
-    and player.x > 185
-    and player.x < 270
-    and player.y > 50
-    and player.y < 100
-    and player.direction == "up" then
 
-        love.graphics.setFont(
-            promptFont
-        )
+    -- Надпис за влизане в склада
+    if map.current == "assets/maps/shopmap.lua"
+        and player.x > 185
+        and player.x < 270
+        and player.y > 50
+        and player.y < 100
+        and player.direction == "up" then
+
+        love.graphics.setFont(promptFont)
+        love.graphics.setColor(1, 1, 1, 1)
 
         love.graphics.print(
             "[E] Enter Storage",
             180,
             40
         )
-
     end
 
 
-    -- storage -> shop prompt
+    -- Надпис за връщане в магазина
     if map.current == "assets/maps/storagemap.lua"
-    and player.x > 910
-    and player.x < 980
-    and player.y > 690
-    and player.y < 800
-    and player.direction == "down" then
+        and player.x > 910
+        and player.x < 980
+        and player.y > 690
+        and player.y < 800
+        and player.direction == "down" then
 
-        love.graphics.setFont(
-            promptFont
-        )
+        love.graphics.setFont(promptFont)
+        love.graphics.setColor(1, 1, 1, 1)
 
         love.graphics.print(
             "[E] Enter Shop",
             961,
             697
         )
-
     end
-    -- money
-    love.graphics.setFont(
-        promptFont
-    )
+
+
+    -- Пари на играча
+    love.graphics.setFont(promptFont)
+    love.graphics.setColor(1, 1, 1, 1)
 
     love.graphics.print(
         "$" .. player.money,
@@ -276,11 +372,12 @@ function love.draw()
         20
     )
 
-    -- delivery menu
+
+    -- Меню за доставки
     delivery.draw()
 
 
-    -- fade overlay
+    -- Ефект при смяна на карта
     love.graphics.setColor(
         0,
         0,
@@ -296,28 +393,74 @@ function love.draw()
         SCREEN_HEIGHT
     )
 
+    love.graphics.setColor(1, 1, 1, 1)
 
-    -- reset color
-    love.graphics.setColor(
-        1,
-        1,
-        1,
-        1
-    )
+
+    -- Save меню
     saveMenu.draw()
+
+
+    -- Координати на играча
+    love.graphics.setColor(1, 1, 1, 1)
+
+    love.graphics.print(
+        "X: " .. math.floor(player.x) ..
+        " Y: " .. math.floor(player.y),
+        20,
+        50
+    )
 end
 
- 
+
+-- Обработка на клавиатурата
 function love.keypressed(key)
-    -- bez interakcii po vreme na transition
-    if transitioning == true then
+   if key == "escape" then
+        love.event.quit()
+    end
+    -- Без взаимодействия при смяна на картата
+    if transitioning then
         return
     end
 
+    -- Вземане на кашон с E
 
-    -- npc dialogue
+-- Вземане на кашон с E
+if key == "e"
+    and delivery.carriedBox == nil
+    and not delivery.MenuOpen
+    and not saveMenu.isOpen then
+
+    -- Първо проверява оставените кашони
+    local droppedIndex = delivery.getNearbyDroppedBox()
+
+    if droppedIndex then
+
+        delivery.pickUpDroppedBox(droppedIndex)
+
+        return
+    end
+
+    -- След това проверява кашоните от доставките
+    if map.current == "assets/maps/storagemap.lua" then
+
+        if pickUpNearbyBox() then
+            return
+        end
+    end
+end
+
+if key == "q"
+    and delivery.carriedBox ~= nil
+    and not delivery.MenuOpen
+    and not saveMenu.isOpen then
+
+    delivery.dropBox()
+    return
+end
+
+    -- Разговор с NPC
     if npc.canIinteract == true
-    and key == "e" then
+        and key == "e" then
 
         if npc.interacted == false then
 
@@ -325,9 +468,7 @@ function love.keypressed(key)
 
         else
 
-            if npc.dialogueStep
-            < #dialogues.introOrder then
-
+            if npc.dialogueStep < #dialogues.introOrder then
 
                 if npc.currentspeaker == "npc" then
 
@@ -338,42 +479,35 @@ function love.keypressed(key)
 
                     npc.playerLine =
                         npc.playerLine + 1
-
                 end
-
 
                 npc.dialogueStep =
                     npc.dialogueStep + 1
 
-
                 npc.currentspeaker =
-                    dialogues.introOrder[
-                        npc.dialogueStep
-                    ]
+                    dialogues.introOrder[npc.dialogueStep]
 
             else
 
+                -- Приключва разговора
                 npc.interacted = false
-
                 npc.currentLine = 1
                 npc.playerLine = 1
-
                 npc.dialogueStep = 1
 
                 npc.currentspeaker = "npc"
-
             end
-
         end
-
     end
-    -- shop -> storage
+
+
+    -- Магазин -> Склад
     if key == "e"
-    and map.current == "assets/maps/shopmap.lua"
-    and player.x > 177
-    and player.x < 280
-    and player.y > 50
-    and player.y < 100 then
+        and map.current == "assets/maps/shopmap.lua"
+        and player.x > 177
+        and player.x < 280
+        and player.y > 50
+        and player.y < 100 then
 
         startMapTransition(
             "assets/maps/storagemap.lua",
@@ -382,16 +516,16 @@ function love.keypressed(key)
         )
 
         return
-
     end
 
-    -- storage -> shop
+
+    -- Склад -> Магазин
     if key == "e"
-    and map.current == "assets/maps/storagemap.lua"
-    and player.x > 910
-    and player.x < 980
-    and player.y > 690
-    and player.y < 800 then
+        and map.current == "assets/maps/storagemap.lua"
+        and player.x > 910
+        and player.x < 980
+        and player.y > 690
+        and player.y < 800 then
 
         startMapTransition(
             "assets/maps/shopmap.lua",
@@ -400,56 +534,62 @@ function love.keypressed(key)
         )
 
         return
-
     end
 
 
-    -- delivery menu
+    -- Меню за доставки
     if key == "tab" then
 
         delivery.MenuOpen =
             not delivery.MenuOpen
-
     end
 
 
+    -- Затваряне на менюто за доставки
     if key == "escape"
-    and delivery.MenuOpen == true then
+        and delivery.MenuOpen then
 
         delivery.MenuOpen = false
-
     end
 
+
+    -- Save меню
     if key == "v" then
         saveMenu.toggle()
     end
 end
-    function love.mousepressed(x,y,button)
 
-          if saveMenu.isOpen then
+
+-- Обработка на мишката
+function love.mousepressed(x, y, button)
+
+    -- Save меню
+    if saveMenu.isOpen then
+
         saveMenu.mousepressed(x, y, button)
         return
     end
 
-     delivery.mousepressed(x,y,button)
+    -- Меню за поръчки
+    delivery.mousepressed(x, y, button)
+end
 
-    end
 
--- Запазва прогреса при затваряне на играта
+-- Запазване при затваряне
 function love.quit()
 
-    -- Записва парите и чакащите доставки
     local success, err = saveMenu.saveCurrent()
 
     if not success then
+
         love.window.showMessageBox(
             "Save Error",
             tostring(err),
             "error"
         )
+
         return true
     end
 
-    -- Затваря базата данни
     saves.close()
 end
