@@ -1,5 +1,12 @@
 shop = {}
 shop.products = {}
+
+shop.stock = {
+    apple = 0,
+    bread = 0,
+    cheese = 0,
+    jam = 0
+}
 shop.products.apple = {
 name = "Apple", boxPrice = 20,  itemsPerBox = 12
 }

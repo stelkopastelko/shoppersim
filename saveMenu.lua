@@ -306,7 +306,7 @@ function saveMenu.saveCurrent()
 
     -- Обновява парите
     data.money = player.money
-
+    data.inventory = shelves.exportInventory(data.inventory)
 -- Взима текущите чакащи поръчки
 data.pendingDeliveries = {}
 
@@ -359,6 +359,7 @@ function saveMenu.mousepressed(x, y, button)
                 end
 
                 player.money = data.money
+                shelves.loadFromInventory(data.inventory)
                 delivery.restoreOrders(data.pendingDeliveries)
                 saveMenu.isOpen = false
                 saveMenu.deleteConfirmSlot = nil
@@ -465,6 +466,7 @@ function saveMenu.mousepressed(x, y, button)
                 end
 
                 player.money = data.money
+                shelves.loadFromInventory(data.inventory)
                 delivery.restoreOrders(data.pendingDeliveries)
                 saveMenu.isOpen = false
                 saveMenu.deleteConfirmSlot = nil

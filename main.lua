@@ -9,7 +9,7 @@ require("delivery")
 require("database")
 require("saves")
 require("saveMenu")
-
+shelves = require("shelves")
 local wf = require("libraries/windfield")
 
 
@@ -27,7 +27,6 @@ transitionDirection = 1
 nextMap = nil
 nextX = 0
 nextY = 0
-
 
 -- Започва смяна на карта
 function startMapTransition(mapPath, x, y)
@@ -109,7 +108,7 @@ function love.load()
     -- Система за доставки
     delivery.load()
     delivery.carriedBox = nil
-
+    shelves.load()
     -- Фонова музика
     shopMusic = love.audio.newSource(
         "assets/music/soundtrack.ogg",
@@ -246,7 +245,7 @@ function love.draw()
 
     -- Карта
     map.draw()
-
+    shelves.draw()
     -- Рисува оставените кашони
 delivery.drawDroppedBoxes()
 
@@ -557,8 +556,18 @@ end
     if key == "v" then
         saveMenu.toggle()
     end
+
+    -- Зареждане на рафтовете
+if key == "e"
+    and not delivery.MenuOpen
+    and not saveMenu.isOpen then
+
+    if shelves.tryRestock() then
+        return
+    end
 end
 
+end
 
 -- Обработка на мишката
 function love.mousepressed(x, y, button)
